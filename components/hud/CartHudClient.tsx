@@ -9,6 +9,7 @@ import { formatMoney } from '@/lib/money'
 import { Sprite } from '@/components/ui/Sprite'
 import { Stepper } from '@/components/ui/Stepper'
 import { PixelButton, PixelLink } from '@/components/ui/PixelButton'
+import { IS_STATIC_DEMO } from '@/lib/demo'
 import { CartFace } from './CartFace'
 
 const PULSE_MS = 450
@@ -164,8 +165,12 @@ export function CartHudClient({ catalog }: { catalog: CatalogEntry[] }) {
               В арсенал
             </PixelLink>
           ) : (
-            <PixelLink href="/checkout" className="shrink-0 px-2 md:px-3">
-              Оформить
+            <PixelLink
+              href={IS_STATIC_DEMO ? '/#contacts' : '/checkout'}
+              className="shrink-0 px-2 md:px-3"
+              onClick={() => setExpanded(false)}
+            >
+              {IS_STATIC_DEMO ? 'Связаться' : 'Оформить'}
             </PixelLink>
           )}
         </div>

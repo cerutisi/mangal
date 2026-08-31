@@ -44,7 +44,9 @@ next-env.d.ts
 mangal.db
 mangal.db-*
 !.env.example
-public/sprites/uploads/
 
 # IDE
 .idea/
+
+# статический экспорт демо
+out/

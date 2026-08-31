@@ -11,7 +11,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "db:reset": "rm -f mangal.db mangal.db-shm mangal.db-wal && npm run db:migrate && npm run db:seed"
+    "db:reset": "rm -f mangal.db mangal.db-shm mangal.db-wal && npm run db:migrate && npm run db:seed",
+    "build:demo": "BUILD_TARGET=demo NEXT_PUBLIC_STATIC_DEMO=true next build",
+    "content:export": "tsx scripts/export-content.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

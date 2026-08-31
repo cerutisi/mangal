@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
@@ -144,11 +145,24 @@ const CATALOG = [
 
 const now = Math.floor(Date.now() / 1000)
 
-db.delete(products).run()
-for (const item of CATALOG) {
-  db.insert(products)
-    .values({
-      id: randomUUID(),
+/**
+ * Снимок контента из админки имеет приоритет над встроенным каталогом.
+ * Так демо-сборка в CI, где базы нет, получает реальные тексты и товары.
+ * Обновить снимок: npm run content:export
+ */
+type Snapshot = {
+  products: Omit<typeof products.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>[]
+  settings: Record<string, unknown>
+}
+
+const snapshotFile = path.join('content', 'demo.json')
+const snapshot: Snapshot | null = fs.existsSync(snapshotFile)
+  ? (JSON.parse(fs.readFileSync(snapshotFile, 'utf8')) as Snapshot)
+  : null
+
+const catalogRows = snapshot
+  ? snapshot.products
+  : CATALOG.map((item) => ({
       slug: item.slug,
       title: item.title,
       tagline: item.tagline,
@@ -161,13 +175,17 @@ for (const item of CATALOG) {
       slotIndex: item.slot,
       isActive: true,
       inStock: 'inStock' in item ? item.inStock : true,
-      createdAt: now,
-      updatedAt: now,
-    })
+    }))
+
+db.delete(products).run()
+for (const row of catalogRows) {
+  db.insert(products)
+    .values({ ...row, id: randomUUID(), createdAt: now, updatedAt: now })
     .run()
 }
 
-for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+const settingsRows = snapshot ? snapshot.settings : DEFAULT_SETTINGS
+for (const [key, value] of Object.entries(settingsRows)) {
   db.insert(settings)
     .values({ key, value })
     .onConflictDoUpdate({ target: settings.key, set: { value } })
@@ -190,5 +208,6 @@ async function seedAdmin() {
 }
 
 seedAdmin().then(() => {
-  console.log(`Товаров загружено: ${CATALOG.length}`)
+  const source = snapshot ? `снимок ${snapshotFile}` : 'встроенный каталог'
+  console.log(`Товаров загружено: ${catalogRows.length} (${source})`)
 })

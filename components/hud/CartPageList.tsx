@@ -8,6 +8,7 @@ import { formatMoney } from '@/lib/money'
 import { Sprite } from '@/components/ui/Sprite'
 import { Stepper } from '@/components/ui/Stepper'
 import { PixelButton, PixelLink } from '@/components/ui/PixelButton'
+import { IS_STATIC_DEMO } from '@/lib/demo'
 
 export function CartPageList({ catalog }: { catalog: CatalogEntry[] }) {
   const lines = useCart((s) => s.lines)
@@ -82,8 +83,8 @@ export function CartPageList({ catalog }: { catalog: CatalogEntry[] }) {
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-hud-lg text-coal tabular-nums">{formatMoney(totalMinor, currency)}</p>
-        <PixelLink href="/checkout" className="px-3">
-          Оформить
+        <PixelLink href={IS_STATIC_DEMO ? '/#contacts' : '/checkout'} className="px-3">
+          {IS_STATIC_DEMO ? 'Связаться' : 'Оформить'}
         </PixelLink>
       </div>
     </div>

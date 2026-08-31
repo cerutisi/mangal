@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { MotionToggle } from '@/components/ui/MotionToggle'
+import { IS_STATIC_DEMO } from '@/lib/demo'
 import type { SiteSettings } from '@/lib/settings'
 
 export function SiteFooter({ settings }: { settings: SiteSettings }) {
@@ -22,12 +23,14 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
 
           <MotionToggle />
 
-          <Link
-            href="/admin/products"
-            className="text-[11px] uppercase tracking-widest text-steel-500 hover:text-coal"
-          >
-            Служебный вход
-          </Link>
+          {!IS_STATIC_DEMO && (
+            <Link
+              href="/admin/products"
+              className="text-[11px] uppercase tracking-widest text-steel-500 hover:text-coal"
+            >
+              Служебный вход
+            </Link>
+          )}
         </div>
       </div>
     </footer>

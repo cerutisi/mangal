@@ -7,6 +7,7 @@ export default async function SiteLayout({
   modal,
 }: {
   children: React.ReactNode
+  /** Слот модалки. В демо-сборке перехватывающего маршрута нет и слот пуст. */
   modal: React.ReactNode
 }) {
   const settings = await getSettings()

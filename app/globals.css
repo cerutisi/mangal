@@ -262,7 +262,9 @@ html[data-motion='calm'] *::after {
 .hero-sprite {
   width: 256px;
   height: 224px;
-  background-image: url('/sprites/hero-still.png');
+  /* Пути приходят из компонента: basePath на GitHub Pages подставляют
+     next/image и next/link, но не CSS — поэтому через переменную */
+  background-image: var(--hero-still);
   background-repeat: no-repeat;
   background-size: 256px 224px;
   image-rendering: pixelated;
@@ -272,14 +274,14 @@ html[data-motion='calm'] *::after {
    в спокойном режиме правило `animation: none` оставляет статичный кадр. */
 @media (prefers-reduced-motion: no-preference) {
   html:not([data-motion='calm']) .hero-sprite {
-    background-image: url('/sprites/hero-sheet.png');
+    background-image: var(--hero-sheet);
     background-size: 1536px 224px;
     animation: hero-frames 0.75s steps(6, end) infinite;
   }
 }
 
 html[data-motion='full'] .hero-sprite {
-  background-image: url('/sprites/hero-sheet.png');
+  background-image: var(--hero-sheet);
   background-size: 1536px 224px;
   animation: hero-frames 0.75s steps(6, end) infinite;
 }
