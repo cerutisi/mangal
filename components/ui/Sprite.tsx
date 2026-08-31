@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { asset } from '@/lib/demo'
 
 /**
  * Спрайт без оптимизации и сглаживания: оптимизатор Next убивает чёткость,
@@ -20,7 +21,8 @@ export function Sprite({
 }) {
   return (
     <Image
-      src={src}
+      // basePath приписывается здесь: с unoptimized next/image этого не делает
+      src={asset(src)}
       alt={alt}
       width={size}
       height={size}
