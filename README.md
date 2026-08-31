@@ -204,8 +204,13 @@ Route Handlers, middleware и базы. Кнопка «Оформить» в д�
 
 ### Первое включение
 
-В настройках репозитория: **Settings → Pages → Build and deployment → Source →
-GitHub Actions**. После этого пуш в `main` публикует сайт.
+Workflow пытается включить Pages сам (`enablement: true` у `configure-pages`).
+Если он всё-таки падает с `Get Pages site failed ... Not Found`, включите вручную:
+**Settings → Pages → Build and deployment → Source → GitHub Actions**, затем
+перезапустите workflow.
+
+Для приватного репозитория на бесплатном тарифе Pages недоступны — репозиторий
+нужно сделать публичным.
 
 ### Как обновить контент демо
 
