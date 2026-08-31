@@ -1,0 +1,315 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------
+   Токены тем. Компоненты не знают о теме — они читают переменные.
+   Переключение: атрибут data-theme на <html>.
+   --------------------------------------------------------------- */
+
+/*
+ * Токены заданы ролями, а не цветами: --surface — фон панели, --edge-light и
+ * --edge-dark — светлая и тёмная грани объёмной рамки. Без этого светлая тема
+ * ломается: в тёмной самый тёмный токен служит и фоном панели, и тенью, а в
+ * светлой это два противоположных цвета.
+ */
+:root,
+[data-theme='iron'] {
+  --void: #0b0908; /* фон страницы */
+  --surface: #17130f; /* фон панелей */
+  --edge-light: #463a30; /* верх и лево рамки */
+  --edge-dark: #0b0908; /* низ, право и жёсткая тень */
+
+  --steel-900: #17130f;
+  --steel-700: #2a221c; /* разделители */
+  --steel-500: #8b7967; /* приглушённый текст, ≥ 4.5:1 на --void */
+  --rust: #7a3410;
+  --blood: #d24b3a; /* ошибки читаются на тёмном фоне */
+  --ember: #f2701d; /* заливка акцентом */
+  --coal: #ffb347; /* акцентный текст: цены, значения */
+  --bone: #ddd0bb; /* основной текст */
+  --moss: #9ccc3c;
+
+  /* Текст поверх заливки акцентом — тёмный, оранжевый идёт фоном */
+  --on-accent: #17130f;
+}
+
+/* Вторая тема: дневное небо, камень, трава, дерево. Компоненты не меняются. */
+[data-theme='blocks'] {
+  --void: #79b7f2;
+  --surface: #c9c1b2;
+  --edge-light: #e8e2d4;
+  --edge-dark: #7a6a52;
+
+  --steel-900: #7a6a52;
+  --steel-700: #a89880;
+  --steel-500: #4e4536;
+  --rust: #7a5c2e;
+  --blood: #9b2b1c;
+  --ember: #6ba32f;
+  --coal: #24540d;
+  --bone: #24201a;
+  --moss: #2f6b12;
+
+  --on-accent: #f2f7e8;
+}
+
+@theme inline {
+  --color-void: var(--void);
+  --color-surface: var(--surface);
+  --color-edge-light: var(--edge-light);
+  --color-edge-dark: var(--edge-dark);
+  --color-steel-900: var(--steel-900);
+  --color-steel-700: var(--steel-700);
+  --color-steel-500: var(--steel-500);
+  --color-rust: var(--rust);
+  --color-blood: var(--blood);
+  --color-ember: var(--ember);
+  --color-coal: var(--coal);
+  --color-bone: var(--bone);
+  --color-moss: var(--moss);
+  --color-on-accent: var(--on-accent);
+
+  --font-display: var(--font-pixel), 'Courier New', monospace;
+  --font-mono: var(--font-plex), ui-monospace, monospace;
+
+  /* Базовая единица 8px: любой отступ по сетке кратен восьми */
+  --spacing: 0.5rem;
+}
+
+@layer base {
+  /* Радиусов в проекте нет ни одного — это правило, а не рекомендация */
+  *,
+  *::before,
+  *::after {
+    border-radius: 0;
+  }
+
+  html {
+    background: var(--void);
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--void);
+    color: var(--bone);
+    font-family: var(--font-mono);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  ::selection {
+    background: var(--ember);
+    color: var(--on-accent);
+  }
+
+  /* Фокус виден всегда и стилизован — outline: none запрещён */
+  :focus-visible {
+    outline: 3px solid var(--coal);
+    outline-offset: 2px;
+  }
+
+  /* В админке своя палитра и обычный шрифт: пиксельные заголовки там не нужны */
+  .admin-scope :focus-visible {
+    outline: 2px solid #0f172a;
+  }
+
+  .admin-scope h1,
+  .admin-scope h2,
+  .admin-scope h3 {
+    font-family: inherit;
+    letter-spacing: normal;
+    line-height: 1.3;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: 0.02em;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Утилиты пиксель-перфекта
+   --------------------------------------------------------------- */
+
+/* Спрайты масштабируются только целочисленно и без сглаживания */
+@utility pixelated {
+  image-rendering: pixelated;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
+/* Объёмная рамка эпохи: свет сверху-слева, тень снизу-справа */
+@utility bevel {
+  border-top: 2px solid var(--edge-light);
+  border-left: 2px solid var(--edge-light);
+  border-right: 2px solid var(--edge-dark);
+  border-bottom: 2px solid var(--edge-dark);
+}
+
+/* Та же рамка, вдавленная — для полей ввода и «утопленных» панелей */
+@utility bevel-in {
+  border-top: 2px solid var(--edge-dark);
+  border-left: 2px solid var(--edge-dark);
+  border-right: 2px solid var(--edge-light);
+  border-bottom: 2px solid var(--edge-light);
+}
+
+/* Тень — жёсткий смещённый блок, не размытие */
+@utility hard-shadow {
+  box-shadow: 4px 4px 0 var(--edge-dark);
+}
+
+@utility hard-shadow-ember {
+  box-shadow: 4px 4px 0 var(--rust);
+}
+
+/* Дисплейный шрифт: только кегли, кратные базовому — иначе глифы замылит */
+@utility text-hud {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+@utility text-hud-lg {
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* Текстовая колонка не длиннее 70 символов */
+@utility prose-column {
+  max-width: 66ch;
+}
+
+/* ---------------------------------------------------------------
+   Анимации. Все — под контролем «спокойного режима».
+   --------------------------------------------------------------- */
+
+@keyframes ember-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+@keyframes sprite-jitter {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(1px, -1px);
+  }
+}
+
+.animate-ember {
+  /* 1.2 с на цикл — заведомо реже трёх вспышек в секунду */
+  animation: ember-pulse 1.2s steps(2, end) infinite;
+}
+
+/* Спокойный режим: выключает дрожание, пульсацию и покадровую анимацию.
+   prefers-reduced-motion включает его сам, до гидрации и без JS.
+   Тумблер в футере может как включить его вручную, так и вернуть анимации. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion='full']) *,
+  html:not([data-motion='full']) *::before,
+  html:not([data-motion='full']) *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html[data-motion='calm'] *,
+html[data-motion='calm'] *::before,
+html[data-motion='calm'] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* ---------------------------------------------------------------
+   Hero: покадровая анимация спрайт-листа.
+   Намеренно низкий фреймрейт — 8 кадров в секунду, как в 1993-м.
+   --------------------------------------------------------------- */
+
+@keyframes hero-frames {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -1536px;
+  }
+}
+
+.hero-sprite {
+  width: 256px;
+  height: 224px;
+  background-image: url('/sprites/hero-still.png');
+  background-repeat: no-repeat;
+  background-size: 256px 224px;
+  image-rendering: pixelated;
+}
+
+/* Анимированный вариант включается только при работающих анимациях:
+   в спокойном режиме правило `animation: none` оставляет статичный кадр. */
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-motion='calm']) .hero-sprite {
+    background-image: url('/sprites/hero-sheet.png');
+    background-size: 1536px 224px;
+    animation: hero-frames 0.75s steps(6, end) infinite;
+  }
+}
+
+html[data-motion='full'] .hero-sprite {
+  background-image: url('/sprites/hero-sheet.png');
+  background-size: 1536px 224px;
+  animation: hero-frames 0.75s steps(6, end) infinite;
+}
+
+@media (min-width: 768px) {
+  .hero-sprite {
+    /* Только целочисленное увеличение: 256 → 512, 224 → 448 */
+    width: 512px;
+    height: 448px;
+    background-size: 512px 448px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html:not([data-motion='calm']) .hero-sprite {
+      background-size: 3072px 448px;
+      animation-name: hero-frames-2x;
+    }
+  }
+
+  html[data-motion='full'] .hero-sprite {
+    background-size: 3072px 448px;
+    animation-name: hero-frames-2x;
+  }
+}
+
+@keyframes hero-frames-2x {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -3072px;
+  }
+}
