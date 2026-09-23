@@ -57,7 +57,8 @@ export function CheckoutForm({ catalog, demo }: { catalog: CatalogEntry[]; demo:
 
     const result = await createOrder({
       fields: values,
-      items: lines.map((l) => ({ productId: l.productId, qty: l.qty })),
+      // Ровно то, что человек видит в сводке справа: скрытые позиции не заказываем
+      items: resolved.map((l) => ({ productId: l.productId, qty: l.qty })),
       website: (document.getElementById('website') as HTMLInputElement | null)?.value ?? '',
       startedAt: startedAt.current,
       idempotencyKey,

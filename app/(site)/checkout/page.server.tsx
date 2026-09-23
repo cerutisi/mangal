@@ -3,6 +3,11 @@ import Link from 'next/link'
 import { CheckoutForm } from '@/components/storefront/CheckoutForm'
 import { getCatalogEntries } from '@/lib/catalog'
 
+// Не статика: страницу собрали бы при деплое, и если база в тот момент пуста,
+// все получали бы пустой каталог до фоновой перегенерации. Каталог при этом
+// всё равно кэшируется (unstable_cache), так что база лишней нагрузки не видит.
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Оформление заявки',
   description: 'Оставьте контакты — менеджер подтвердит заказ и сроки.',

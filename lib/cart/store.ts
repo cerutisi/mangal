@@ -18,7 +18,6 @@ type CartState = {
   clear: () => void
   setExpanded: (value: boolean) => void
   toggleExpanded: () => void
-  prune: (knownIds: string[]) => void
   setHydrated: () => void
 }
 
@@ -42,13 +41,6 @@ export const useCart = create<CartState>()(
       clear: () => set({ lines: [], expanded: false }),
       setExpanded: (expanded) => set({ expanded }),
       toggleExpanded: () => set({ expanded: !get().expanded }),
-
-      /** Товар мог быть удалён или снят с публикации, пока корзина лежала в хранилище */
-      prune: (knownIds) => {
-        const known = new Set(knownIds)
-        const lines = get().lines.filter((l) => known.has(l.productId))
-        if (lines.length !== get().lines.length) set({ lines })
-      },
 
       setHydrated: () => set({ hydrated: true }),
     }),

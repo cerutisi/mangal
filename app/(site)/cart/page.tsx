@@ -3,6 +3,11 @@ import Link from 'next/link'
 import { CartPageList } from '@/components/hud/CartPageList'
 import { getCatalogEntries } from '@/lib/catalog'
 
+// Остаётся статической: страница есть и в демо под Pages, а там динамики нет.
+// Устаревший каталог здесь безопасен — корзина по нему только скрывает
+// неизвестные позиции, но не удаляет их (см. resolveLines).
+export const revalidate = 60
+
 export const metadata: Metadata = {
   title: 'Корзина',
   robots: { index: false },

@@ -17,17 +17,16 @@ export function setLineQty(lines: CartLine[], productId: string, qty: number): C
   return lines.map((l) => (l.productId === productId ? { ...l, qty: Math.min(next, MAX_QTY) } : l))
 }
 
-/**
- * Отбрасывает позиции, которых больше нет в каталоге.
- * Товар могли удалить или снять с публикации, пока корзина лежала в localStorage.
- */
-export function pruneLines(lines: CartLine[], catalog: CatalogEntry[]): CartLine[] {
-  const known = new Set(catalog.map((p) => p.id))
-  return lines.filter((l) => known.has(l.productId) && l.qty > 0)
-}
-
 export type ResolvedLine = CartLine & { product: CatalogEntry; sumMinor: number }
 
+/**
+ * Позиции, которые можно показать: те, что есть в каталоге страницы.
+ *
+ * Неизвестные позиции только скрываются, но из корзины НЕ удаляются.
+ * Каталог приходит со страницы и может быть устаревшим — например, статическая
+ * страница собрана, когда база была пустой. Если удалять по нему, одна такая
+ * страница стирает корзину целиком. Авторитет по наличию — сервер при заказе.
+ */
 export function resolveLines(lines: CartLine[], catalog: CatalogEntry[]): ResolvedLine[] {
   const byId = new Map(catalog.map((p) => [p.id, p]))
   return lines.flatMap((line) => {

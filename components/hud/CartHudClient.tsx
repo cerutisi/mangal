@@ -18,20 +18,13 @@ export function CartHudClient({ catalog }: { catalog: CatalogEntry[] }) {
   const lines = useCart((s) => s.lines)
   const expanded = useCart((s) => s.expanded)
   const pulseAt = useCart((s) => s.pulseAt)
-  const hydrated = useCart((s) => s.hydrated)
   const setExpanded = useCart((s) => s.setExpanded)
   const toggleExpanded = useCart((s) => s.toggleExpanded)
   const setQty = useCart((s) => s.setQty)
   const remove = useCart((s) => s.remove)
-  const prune = useCart((s) => s.prune)
 
   const [pulsing, setPulsing] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
-
-  // Товар мог исчезнуть из каталога, пока корзина лежала в localStorage
-  useEffect(() => {
-    if (hydrated) prune(catalog.map((p) => p.id))
-  }, [hydrated, catalog, prune])
 
   useEffect(() => {
     if (!pulseAt) return
