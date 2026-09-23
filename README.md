@@ -265,7 +265,8 @@ turso db tokens create mangal       # токен
 Регион базы лучше выбрать тот же, где будут крутиться функции Vercel, иначе
 каждый запрос к базе получит лишние десятки миллисекунд.
 
-Применить миграции и залить стартовый контент — один раз, с локальной машины:
+Применить миграции и залить стартовый контент — один раз, с локальной машины.
+`DATABASE_URL` здесь перекрывает файловую базу из `.env.local`:
 
 ```bash
 export DATABASE_URL=libsql://mangal-<организация>.turso.io
@@ -273,6 +274,22 @@ export DATABASE_AUTH_TOKEN=<токен>
 npm run db:migrate
 SEED_ADMIN_PASSWORD=<пароль> SEED_CONFIRM=yes npm run db:seed
 ```
+
+Пароль здесь станет боевым паролем администратора — не берите его из
+`.env.local`, там лежит пароль для локальной разработки.
+
+### Какая база подхватится
+
+| Что задано | Куда пойдут запросы |
+|---|---|
+| ничего | `file:mangal.db` |
+| `DATABASE_URL=file:mangal.db` + `TURSO_*` | файл — локальная разработка остаётся локальной |
+| только `TURSO_*` (так на Vercel) | Turso |
+| `DATABASE_URL=libsql://…` | Turso |
+
+Порядок именно такой, потому что `vercel env pull` дописывает `TURSO_*` в
+существующий `.env.local`. Если бы побеждала интеграция, `npm run dev` и сборка
+демо молча начали бы работать с боевой базой.
 
 `SEED_CONFIRM=yes` обязателен для удалённой базы намеренно: сид удаляет все
 товары, и без этой защиты повторный запуск стёр бы правки менеджера.
@@ -283,8 +300,8 @@ SEED_ADMIN_PASSWORD=<пароль> SEED_CONFIRM=yes npm run db:seed
 
 | Переменная | Значение |
 |---|---|
-| `DATABASE_URL` | `libsql://mangal-<организация>.turso.io` |
-| `DATABASE_AUTH_TOKEN` | токен Turso |
+| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | появятся сами, если подключить интеграцию Turso |
+| `DATABASE_URL`, `DATABASE_AUTH_TOKEN` | то же самое вручную, если интеграцию не ставить |
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `NEXT_PUBLIC_SITE_URL` | адрес проекта на Vercel |
 | `RESEND_API_KEY`, `ORDER_EMAIL_*` | если нужны письма |

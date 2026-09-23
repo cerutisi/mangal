@@ -4,28 +4,24 @@ import { randomUUID } from 'node:crypto'
 import { createClient } from '@libsql/client'
 import { drizzle } from 'drizzle-orm/libsql'
 import { adminUsers, products, settings, type ProductStat } from '../lib/db/schema'
+import { resolveDbConfig, describeDb } from '../lib/db/config'
 import { DEFAULT_SETTINGS } from '../lib/settings'
 import { hashPassword } from '../lib/auth/password'
 
 if (fs.existsSync('.env.local')) process.loadEnvFile('.env.local')
 
-const url = process.env.DATABASE_URL ?? 'file:mangal.db'
-const authToken = process.env.DATABASE_AUTH_TOKEN
+const config = resolveDbConfig()
 
-if (!url.startsWith('file:') && !authToken) {
-  throw new Error('Для удалённой базы нужен DATABASE_AUTH_TOKEN — см. .env.example')
-}
-
-// Сид удаляет все товары. Локально это норма, по удалённой базе — потеря
+// Сид удаляет все товары. Локально это норма, по сетевой базе — потеря
 // правок менеджера, поэтому там нужно подтвердить намерение явно.
-if (!url.startsWith('file:') && process.env.SEED_CONFIRM !== 'yes') {
+if (config.isRemote && process.env.SEED_CONFIRM !== 'yes') {
   throw new Error(
-    `Отказ: ${url} — удалённая база, а сид удаляет все товары.\n` +
+    `Отказ: ${describeDb(config)} — сетевая база, а сид удаляет все товары.\n` +
       'Если это действительно нужно, повторите с SEED_CONFIRM=yes',
   )
 }
 
-const client = createClient({ url, authToken })
+const client = createClient({ url: config.url, authToken: config.authToken })
 const db = drizzle(client)
 
 const stat = (key: string, label: string, value: string, bar?: number): ProductStat => ({

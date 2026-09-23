@@ -1,11 +1,12 @@
 import type { Config } from 'drizzle-kit'
+import { resolveDbConfig } from './lib/db/config'
 
-const url = process.env.DATABASE_URL ?? 'file:mangal.db'
+const { url, authToken, isRemote } = resolveDbConfig()
 
 export default {
   schema: './lib/db/schema.ts',
   out: './drizzle',
   // Диалект тот же SQLite; 'turso' отличается только транспортом
-  dialect: url.startsWith('file:') ? 'sqlite' : 'turso',
-  dbCredentials: { url, authToken: process.env.DATABASE_AUTH_TOKEN },
+  dialect: isRemote ? 'turso' : 'sqlite',
+  dbCredentials: { url, authToken },
 } satisfies Config

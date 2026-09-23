@@ -11,13 +11,12 @@ import { createClient } from '@libsql/client'
 import { drizzle } from 'drizzle-orm/libsql'
 import { asc } from 'drizzle-orm'
 import { products, settings } from '../lib/db/schema'
+import { resolveDbConfig } from '../lib/db/config'
 
 if (fs.existsSync('.env.local')) process.loadEnvFile('.env.local')
 
-const client = createClient({
-  url: process.env.DATABASE_URL ?? 'file:mangal.db',
-  authToken: process.env.DATABASE_AUTH_TOKEN,
-})
+const config = resolveDbConfig()
+const client = createClient({ url: config.url, authToken: config.authToken })
 const db = drizzle(client)
 
 const rows = await db.select().from(products).orderBy(asc(products.slotIndex))
