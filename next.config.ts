@@ -49,6 +49,16 @@ const COMMON_HEADERS = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
+  // Нативные модули libSQL не должны попадать в бандл — Next грузит их как есть
+  serverExternalPackages: ['@libsql/client', 'libsql'],
+
+  images: {
+    // В статическом экспорте оптимизатора нет вовсе
+    unoptimized: isDemo,
+    // Спрайты, загруженные из админки на Vercel, лежат в Blob
+    remotePatterns: [{ protocol: 'https', hostname: '**.public.blob.vercel-storage.com' }],
+  },
+
   // Иначе Next поднимается до домашнего каталога из-за чужого lock-файла
   // и тащит в трейс лишние файлы
   outputFileTracingRoot: path.join(__dirname),
@@ -59,7 +69,6 @@ const nextConfig: NextConfig = {
   ...(isDemo
     ? {
         output: 'export' as const,
-        images: { unoptimized: true },
         // Проект-страница живёт в подкаталоге: cerutisi.github.io/mangal/.
         // Для своего домена достаточно очистить NEXT_PUBLIC_BASE_PATH.
         basePath: process.env.NEXT_PUBLIC_BASE_PATH ?? '',

@@ -1,16 +1,32 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { createClient } from '@libsql/client'
+import { drizzle } from 'drizzle-orm/libsql'
 import { adminUsers, products, settings, type ProductStat } from '../lib/db/schema'
 import { DEFAULT_SETTINGS } from '../lib/settings'
 import { hashPassword } from '../lib/auth/password'
 
 if (fs.existsSync('.env.local')) process.loadEnvFile('.env.local')
 
-const sqlite = new Database(process.env.DATABASE_URL?.replace(/^file:/, '') ?? 'mangal.db')
-const db = drizzle(sqlite)
+const url = process.env.DATABASE_URL ?? 'file:mangal.db'
+const authToken = process.env.DATABASE_AUTH_TOKEN
+
+if (!url.startsWith('file:') && !authToken) {
+  throw new Error('Для удалённой базы нужен DATABASE_AUTH_TOKEN — см. .env.example')
+}
+
+// Сид удаляет все товары. Локально это норма, по удалённой базе — потеря
+// правок менеджера, поэтому там нужно подтвердить намерение явно.
+if (!url.startsWith('file:') && process.env.SEED_CONFIRM !== 'yes') {
+  throw new Error(
+    `Отказ: ${url} — удалённая база, а сид удаляет все товары.\n` +
+      'Если это действительно нужно, повторите с SEED_CONFIRM=yes',
+  )
+}
+
+const client = createClient({ url, authToken })
+const db = drizzle(client)
 
 const stat = (key: string, label: string, value: string, bar?: number): ProductStat => ({
   key,
@@ -177,37 +193,33 @@ const catalogRows = snapshot
       inStock: 'inStock' in item ? item.inStock : true,
     }))
 
-db.delete(products).run()
+await db.delete(products)
 for (const row of catalogRows) {
-  db.insert(products)
-    .values({ ...row, id: randomUUID(), createdAt: now, updatedAt: now })
-    .run()
+  await db.insert(products).values({ ...row, id: randomUUID(), createdAt: now, updatedAt: now })
 }
 
 const settingsRows = snapshot ? snapshot.settings : DEFAULT_SETTINGS
 for (const [key, value] of Object.entries(settingsRows)) {
-  db.insert(settings)
+  await db
+    .insert(settings)
     .values({ key, value })
     .onConflictDoUpdate({ target: settings.key, set: { value } })
-    .run()
 }
 
-async function seedAdmin() {
-  const login = process.env.SEED_ADMIN_LOGIN ?? 'admin'
-  const password = process.env.SEED_ADMIN_PASSWORD
-  if (!password) {
-    console.warn('SEED_ADMIN_PASSWORD не задан — администратор не создан')
-    return
-  }
+const login = process.env.SEED_ADMIN_LOGIN ?? 'admin'
+const password = process.env.SEED_ADMIN_PASSWORD
+if (!password) {
+  console.warn('SEED_ADMIN_PASSWORD не задан — администратор не создан')
+} else {
   const passwordHash = await hashPassword(password)
-  db.insert(adminUsers)
+  await db
+    .insert(adminUsers)
     .values({ id: randomUUID(), login, passwordHash, role: 'admin', createdAt: now })
     .onConflictDoUpdate({ target: adminUsers.login, set: { passwordHash } })
-    .run()
   console.log(`Администратор: ${login}`)
 }
 
-seedAdmin().then(() => {
-  const source = snapshot ? `снимок ${snapshotFile}` : 'встроенный каталог'
-  console.log(`Товаров загружено: ${catalogRows.length} (${source})`)
-})
+client.close()
+
+const source = snapshot ? `снимок ${snapshotFile}` : 'встроенный каталог'
+console.log(`Товаров загружено: ${catalogRows.length} (${source})`)

@@ -112,13 +112,12 @@ export async function reorderProducts(ids: string[]): Promise<ActionResult> {
   }
 
   const now = Math.floor(Date.now() / 1000)
-  // Драйвер better-sqlite3 синхронный: колбэк транзакции не должен возвращать промис
-  db.transaction((tx) => {
+  await db.transaction(async (tx) => {
     for (const [index, id] of ids.entries()) {
-      tx.update(products)
+      await tx
+        .update(products)
         .set({ slotIndex: index + 1, updatedAt: now })
         .where(eq(products.id, id))
-        .run()
     }
   })
 

@@ -7,18 +7,21 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { createClient } from '@libsql/client'
+import { drizzle } from 'drizzle-orm/libsql'
 import { asc } from 'drizzle-orm'
 import { products, settings } from '../lib/db/schema'
 
 if (fs.existsSync('.env.local')) process.loadEnvFile('.env.local')
 
-const sqlite = new Database(process.env.DATABASE_URL?.replace(/^file:/, '') ?? 'mangal.db')
-const db = drizzle(sqlite)
+const client = createClient({
+  url: process.env.DATABASE_URL ?? 'file:mangal.db',
+  authToken: process.env.DATABASE_AUTH_TOKEN,
+})
+const db = drizzle(client)
 
-const rows = db.select().from(products).orderBy(asc(products.slotIndex)).all()
-const settingRows = db.select().from(settings).all()
+const rows = await db.select().from(products).orderBy(asc(products.slotIndex))
+const settingRows = await db.select().from(settings)
 
 // id и метки времени в снимок не идут: при сиде они выдаются заново
 const snapshot = {

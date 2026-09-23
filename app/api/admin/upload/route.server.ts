@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import fs from 'node:fs/promises'
-import path from 'node:path'
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth/current-user'
+import { putSprite } from '@/lib/storage'
 
 export const runtime = 'nodejs'
 
@@ -75,14 +74,11 @@ export async function POST(request: Request) {
   }
 
   // Имя всегда UUID: имя из браузера не должно попадать в путь
-  const name = `${randomUUID()}.png`
-  const dir = path.join(process.cwd(), 'public', 'sprites', 'uploads')
-  await fs.mkdir(dir, { recursive: true })
-  await fs.writeFile(path.join(dir, name), buffer)
+  const url = await putSprite(`${randomUUID()}.png`, buffer)
 
   return NextResponse.json({
     ok: true,
-    url: `/sprites/uploads/${name}`,
+    url,
     width: size.width,
     height: size.height,
     warnings,

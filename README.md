@@ -46,7 +46,7 @@ openssl rand -base64 32
 ## Стек
 
 Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind CSS v4 ·
-Zustand + persist · React Hook Form + Zod · Drizzle ORM · SQLite (better-sqlite3) ·
+Zustand + persist · React Hook Form + Zod · Drizzle ORM · SQLite (@libsql/client) ·
 jose (сессии) · hash-wasm (argon2id).
 
 **Почему SQLite, а не Postgres.** ТЗ допускает это как альтернативу (п. 3). Проект
@@ -245,6 +245,66 @@ NEXT_PUBLIC_BASE_PATH=/mangal npm run build:demo
 
 Готовые файлы — в `out/`. Открывать их напрямую из файловой системы бесполезно:
 из-за `basePath` нужен HTTP-сервер, где сайт лежит в каталоге `mangal/`.
+
+---
+
+## Деплой сайта целиком (Vercel + Turso)
+
+GitHub Pages отдаёт только статику, поэтому оформление заказа и админка там не
+работают — для них нужен Node. Рабочий вариант: Vercel для приложения и Turso
+для базы. Схема Drizzle не меняется: Turso — это тот же SQLite, только по сети.
+
+### 1. База на Turso
+
+```bash
+turso db create mangal
+turso db show mangal --url          # libsql://mangal-<организация>.turso.io
+turso db tokens create mangal       # токен
+```
+
+Регион базы лучше выбрать тот же, где будут крутиться функции Vercel, иначе
+каждый запрос к базе получит лишние десятки миллисекунд.
+
+Применить миграции и залить стартовый контент — один раз, с локальной машины:
+
+```bash
+export DATABASE_URL=libsql://mangal-<организация>.turso.io
+export DATABASE_AUTH_TOKEN=<токен>
+npm run db:migrate
+SEED_ADMIN_PASSWORD=<пароль> SEED_CONFIRM=yes npm run db:seed
+```
+
+`SEED_CONFIRM=yes` обязателен для удалённой базы намеренно: сид удаляет все
+товары, и без этой защиты повторный запуск стёр бы правки менеджера.
+
+### 2. Проект на Vercel
+
+Импортировать репозиторий, framework определится сам. Переменные окружения:
+
+| Переменная | Значение |
+|---|---|
+| `DATABASE_URL` | `libsql://mangal-<организация>.turso.io` |
+| `DATABASE_AUTH_TOKEN` | токен Turso |
+| `AUTH_SECRET` | `openssl rand -base64 32` |
+| `NEXT_PUBLIC_SITE_URL` | адрес проекта на Vercel |
+| `RESEND_API_KEY`, `ORDER_EMAIL_*` | если нужны письма |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | если нужен Telegram |
+
+Сборка идёт скриптом `vercel-build`: он прогоняет миграции и только потом
+собирает. Витрина рендерится статически на этапе сборки, поэтому база должна
+быть доступна уже тогда.
+
+### 3. Хранилище спрайтов
+
+В настройках проекта: **Storage → Create → Blob**. Vercel сам добавит
+`BLOB_READ_WRITE_TOKEN`, и загрузка из админки переключится на Blob — на
+serverless-функции писать в `public/` нельзя. Локально переменной нет, и файлы
+как раньше ложатся в `public/sprites/uploads/`.
+
+### Что остаётся на GitHub Pages
+
+Демо-витрина никуда не девается: это отдельная сборка из того же репозитория,
+удобная как быстрая публичная ссылка. Полный сайт живёт на Vercel.
 
 ---
 

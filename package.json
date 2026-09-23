@@ -9,15 +9,17 @@
     "lint": "eslint",
     "sprites": "node scripts/gen-sprites.mjs",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts",
-    "db:seed": "tsx scripts/seed.ts",
+    "db:migrate": "tsx scripts/migrate.mts",
+    "db:seed": "tsx scripts/seed.mts",
     "db:reset": "rm -f mangal.db mangal.db-shm mangal.db-wal && npm run db:migrate && npm run db:seed",
     "build:demo": "BUILD_TARGET=demo NEXT_PUBLIC_STATIC_DEMO=true next build",
-    "content:export": "tsx scripts/export-content.ts"
+    "content:export": "tsx scripts/export-content.mts",
+    "vercel-build": "npm run db:migrate && next build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
-    "better-sqlite3": "^13.0.3",
+    "@libsql/client": "^0.18.0",
+    "@vercel/blob": "^2.8.0",
     "drizzle-orm": "^0.45.2",
     "hash-wasm": "^4.12.0",
     "jose": "^6.2.10",
@@ -32,7 +34,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -104,12 +104,11 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
   const orderId = randomUUID()
   const now = Math.floor(Date.now() / 1000)
 
-  // Драйвер better-sqlite3 синхронный: колбэк транзакции не должен возвращать промис
-  const number = db.transaction((tx) => {
-    const [{ count }] = tx.select({ count: sql<number>`count(*)` }).from(orders).all()
+  const number = await db.transaction(async (tx) => {
+    const [{ count }] = await tx.select({ count: sql<number>`count(*)` }).from(orders)
     const orderNumber = formatOrderNumber(count + 1)
 
-    tx.insert(orders).values({
+    await tx.insert(orders).values({
       id: orderId,
       number: orderNumber,
       idempotencyKey,
@@ -125,9 +124,9 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
       meta,
       createdAt: now,
       updatedAt: now,
-    }).run()
+    })
 
-    tx.insert(orderItems).values(
+    await tx.insert(orderItems).values(
       items.map((i) => {
         const product = byId.get(i.productId)!
         return {
@@ -139,7 +138,7 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
           qty: i.qty,
         }
       }),
-    ).run()
+    )
 
     return orderNumber
   })
