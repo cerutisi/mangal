@@ -21,6 +21,10 @@ export type DbConfig = {
  * достаточно убрать DATABASE_URL из .env.local.
  */
 export function resolveDbConfig(): DbConfig {
+  // DB_TARGET=remote — осознанная работа с боевой базой с локальной машины
+  // (скрипты db:*:remote). Файловый DATABASE_URL из .env.local тогда игнорируется.
+  if (process.env.DB_TARGET === 'remote') return resolveRemote()
+
   const explicit = process.env.DATABASE_URL
   const integration = process.env.TURSO_DATABASE_URL
 
@@ -39,6 +43,24 @@ export function resolveDbConfig(): DbConfig {
   }
 
   return { url, authToken, isRemote }
+}
+
+function resolveRemote(): DbConfig {
+  const fromDatabaseUrl = process.env.DATABASE_URL?.startsWith('libsql:')
+    ? process.env.DATABASE_URL
+    : undefined
+  const url = process.env.TURSO_DATABASE_URL || fromDatabaseUrl
+  const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN
+
+  if (!url) {
+    throw new Error(
+      'DB_TARGET=remote, но адрес сетевой базы не найден: задайте TURSO_DATABASE_URL в .env.local',
+    )
+  }
+  if (!authToken) {
+    throw new Error('DB_TARGET=remote, но токен не задан: нужен TURSO_AUTH_TOKEN')
+  }
+  return { url, authToken, isRemote: true }
 }
 
 /** Короткая подпись базы для логов — без токена и без query-параметров. */

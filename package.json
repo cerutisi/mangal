@@ -14,7 +14,9 @@
     "db:reset": "rm -f mangal.db mangal.db-shm mangal.db-wal && npm run db:migrate && npm run db:seed",
     "build:demo": "BUILD_TARGET=demo NEXT_PUBLIC_STATIC_DEMO=true next build",
     "content:export": "tsx scripts/export-content.mts",
-    "vercel-build": "npm run db:migrate && next build"
+    "vercel-build": "npm run db:migrate && next build",
+    "db:migrate:remote": "DB_TARGET=remote tsx scripts/migrate.mts",
+    "db:seed:remote": "DB_TARGET=remote tsx scripts/seed.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

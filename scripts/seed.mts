@@ -3,26 +3,35 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { createClient } from '@libsql/client'
 import { drizzle } from 'drizzle-orm/libsql'
+import { sql } from 'drizzle-orm'
 import { adminUsers, products, settings, type ProductStat } from '../lib/db/schema'
 import { resolveDbConfig, describeDb } from '../lib/db/config'
 import { DEFAULT_SETTINGS } from '../lib/settings'
 import { hashPassword } from '../lib/auth/password'
 
+// Пароль, переданный в командной строке, запоминаем до чтения .env.local:
+// для боевой базы годится только он, а не локальный пароль из файла
+const passwordFromCli = process.env.SEED_ADMIN_PASSWORD
+
 if (fs.existsSync('.env.local')) process.loadEnvFile('.env.local')
 
 const config = resolveDbConfig()
-
-// Сид удаляет все товары. Локально это норма, по сетевой базе — потеря
-// правок менеджера, поэтому там нужно подтвердить намерение явно.
-if (config.isRemote && process.env.SEED_CONFIRM !== 'yes') {
-  throw new Error(
-    `Отказ: ${describeDb(config)} — сетевая база, а сид удаляет все товары.\n` +
-      'Если это действительно нужно, повторите с SEED_CONFIRM=yes',
-  )
-}
-
 const client = createClient({ url: config.url, authToken: config.authToken })
 const db = drizzle(client)
+
+if (config.isRemote) {
+  // Сид удаляет все товары. В пустую базу это безопасно — так она и
+  // заполняется в первый раз. В заполненной это потеря правок менеджера,
+  // поэтому там нужно подтвердить намерение явно.
+  const [{ n }] = await db.select({ n: sql<number>`count(*)` }).from(products)
+  if (n > 0 && process.env.SEED_CONFIRM !== 'yes') {
+    client.close()
+    throw new Error(
+      `Отказ: в ${describeDb(config)} уже ${n} товаров, а сид удаляет все товары.\n` +
+        'Если это действительно нужно, повторите с SEED_CONFIRM=yes',
+    )
+  }
+}
 
 const stat = (key: string, label: string, value: string, bar?: number): ProductStat => ({
   key,
@@ -203,9 +212,14 @@ for (const [key, value] of Object.entries(settingsRows)) {
 }
 
 const login = process.env.SEED_ADMIN_LOGIN ?? 'admin'
-const password = process.env.SEED_ADMIN_PASSWORD
+const password = config.isRemote ? passwordFromCli : process.env.SEED_ADMIN_PASSWORD
 if (!password) {
-  console.warn('SEED_ADMIN_PASSWORD не задан — администратор не создан')
+  console.warn(
+    config.isRemote
+      ? 'Администратор не создан: для боевой базы пароль передаётся в командной строке, ' +
+          'SEED_ADMIN_PASSWORD=... npm run db:seed:remote'
+      : 'SEED_ADMIN_PASSWORD не задан — администратор не создан',
+  )
 } else {
   const passwordHash = await hashPassword(password)
   await db
