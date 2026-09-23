@@ -63,7 +63,6 @@ app/
   (site)/              витрина: главная, карточка, корзина, оформление, подтверждение
     @modal/(.)product/ перехватывающий маршрут — карточка модалкой поверх арсенала
   admin/               админка: вход, товары, заявки, настройки
-  api/admin/           загрузка спрайтов, выгрузка заявок в CSV
 actions/               Server Actions (заказ, авторизация, CRUD, настройки)
 components/
   hud/                 HUD-корзина и морда мангала
@@ -82,10 +81,16 @@ content/demo.json      контент для сборок без базы (CI)
 
 **Про расширение `.server.tsx`.** Маршруты, которым нужен сервер — оформление
 заказа, подтверждение, вся админка, Route Handlers, middleware — лежат в файлах
-`page.server.tsx` / `route.server.ts` / `middleware.server.ts`. Обычная сборка
+`page.server.tsx` / `layout.server.tsx` / `middleware.server.ts`. Обычная сборка
 считает такие файлы маршрутами (`pageExtensions` в `next.config.ts`), а
 демо-сборка под GitHub Pages — нет, поэтому серверный код в статический экспорт
 просто не попадает. Это единственная причина необычных имён.
+
+Route Handlers так прятать нельзя: для `route.server.ts` Next не генерирует
+`route_client-reference-manifest.js`, и сборка на Vercel падает с `ENOENT`.
+Поэтому в проекте нет `app/api/` — загрузка спрайтов и выгрузка CSV сделаны
+Server Actions (`actions/admin-upload.ts`, `actions/admin-export.ts`), как и вся
+остальная админка.
 
 ---
 
@@ -337,6 +342,6 @@ serverless-функции писать в `public/` нельзя. Локальн
 - тесты: Vitest на расчёты корзины и Zod-схемы, Playwright на сценарии, axe-core в CI;
 - ручная проверка iOS Safari (`position: fixed` у HUD при открытой клавиатуре).
 
-Хранилище спрайтов сейчас — локальная файловая система (`public/sprites/uploads`).
-На Vercel файловая система только для чтения: перед деплоем загрузку нужно перевести
-на Vercel Blob или S3. Точка замены одна — `app/api/admin/upload/route.ts`.
+Хранилище спрайтов переключается само: без `BLOB_READ_WRITE_TOKEN` файлы ложатся
+в `public/sprites/uploads`, с ним — в Vercel Blob. Перейти на S3 — поменять одну
+функцию в `lib/storage.ts`.

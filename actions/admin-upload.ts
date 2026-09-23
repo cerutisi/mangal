@@ -1,9 +1,12 @@
+'use server'
+
 import { randomUUID } from 'node:crypto'
-import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth/current-user'
+import { requireSession } from '@/lib/auth/current-user'
 import { putSprite } from '@/lib/storage'
 
-export const runtime = 'nodejs'
+export type UploadResult =
+  | { ok: true; url: string; width: number; height: number; warnings: string[] }
+  | { ok: false; message: string }
 
 const MAX_BYTES = 200 * 1024
 const MAX_SIDE = 512
@@ -23,28 +26,23 @@ function looksSmoothed(buffer: Buffer): boolean {
   // поэтому PNG жмётся в разы сильнее, чем фотография того же размера.
   const size = readPngSize(buffer)
   if (!size) return false
-  const bytesPerPixel = buffer.length / (size.width * size.height)
-  return bytesPerPixel > 0.6
+  return buffer.length / (size.width * size.height) > 0.6
 }
 
-export async function POST(request: Request) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ ok: false, message: 'Требуется вход' }, { status: 401 })
-  }
+export async function uploadSprite(form: FormData): Promise<UploadResult> {
+  // Проверка сессии здесь, а не в UI: отсутствие кнопки — не защита
+  await requireSession()
 
-  const form = await request.formData()
   const file = form.get('file')
-
   if (!(file instanceof File)) {
-    return NextResponse.json({ ok: false, message: 'Файл не получен' }, { status: 400 })
+    return { ok: false, message: 'Файл не получен' }
   }
 
   if (file.size > MAX_BYTES) {
-    return NextResponse.json(
-      { ok: false, message: `Файл ${Math.round(file.size / 1024)} КБ — лимит 200 КБ` },
-      { status: 400 },
-    )
+    return {
+      ok: false,
+      message: `Файл ${Math.round(file.size / 1024)} КБ — лимит 200 КБ`,
+    }
   }
 
   const buffer = Buffer.from(await file.arrayBuffer())
@@ -52,17 +50,14 @@ export async function POST(request: Request) {
   // Проверяем магические байты, а не Content-Type: заголовок подделывается тривиально
   const size = readPngSize(buffer)
   if (!size) {
-    return NextResponse.json(
-      { ok: false, message: 'Это не PNG. Спрайты принимаются только в PNG.' },
-      { status: 400 },
-    )
+    return { ok: false, message: 'Это не PNG. Спрайты принимаются только в PNG.' }
   }
 
   if (size.width > MAX_SIDE || size.height > MAX_SIDE) {
-    return NextResponse.json(
-      { ok: false, message: `Размер ${size.width}×${size.height} — максимум 512×512` },
-      { status: 400 },
-    )
+    return {
+      ok: false,
+      message: `Размер ${size.width}×${size.height} — максимум 512×512`,
+    }
   }
 
   const warnings: string[] = []
@@ -76,11 +71,5 @@ export async function POST(request: Request) {
   // Имя всегда UUID: имя из браузера не должно попадать в путь
   const url = await putSprite(`${randomUUID()}.png`, buffer)
 
-  return NextResponse.json({
-    ok: true,
-    url,
-    width: size.width,
-    height: size.height,
-    warnings,
-  })
+  return { ok: true, url, width: size.width, height: size.height, warnings }
 }

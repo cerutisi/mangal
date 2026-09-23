@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { uploadSprite } from '@/actions/admin-upload'
 import { adminButton, adminLabel } from './ui'
 
 const SCALES = [1, 2, 4] as const
@@ -30,14 +31,13 @@ export function SpriteUploader({
     body.append('file', file)
 
     try {
-      const response = await fetch('/api/admin/upload', { method: 'POST', body })
-      const data = await response.json()
-      if (!data.ok) {
-        setUploadError(data.message)
+      const result = await uploadSprite(body)
+      if (!result.ok) {
+        setUploadError(result.message)
         return
       }
-      onChange(data.url)
-      setWarnings(data.warnings ?? [])
+      onChange(result.url)
+      setWarnings(result.warnings)
     } catch {
       setUploadError('Не удалось загрузить файл. Проверьте связь и попробуйте ещё раз.')
     } finally {

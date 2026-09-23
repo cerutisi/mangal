@@ -7,6 +7,7 @@ import { requireSession } from '@/lib/auth/current-user'
 import { formatMoney } from '@/lib/money'
 import { formatPhone } from '@/lib/validation'
 import { STATUS_LABELS, STATUS_TONE } from '@/lib/orders'
+import { ExportOrdersButton } from '@/components/admin/ExportOrdersButton'
 import { adminButton } from '@/components/admin/ui'
 
 export const dynamic = 'force-dynamic'
@@ -34,11 +35,6 @@ export default async function AdminOrdersPage({
     .from(orders)
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(desc(orders.createdAt))
-
-  const exportQuery = new URLSearchParams()
-  if (status) exportQuery.set('status', status)
-  if (from) exportQuery.set('from', from)
-  if (to) exportQuery.set('to', to)
 
   return (
     <div>
@@ -89,9 +85,7 @@ export default async function AdminOrdersPage({
           Сбросить
         </Link>
 
-        <a href={`/api/admin/orders/export?${exportQuery}`} className={`${adminButton} ml-auto`}>
-          Выгрузить CSV
-        </a>
+        <ExportOrdersButton filter={{ status: status ?? undefined, from: from ?? undefined, to: to ?? undefined }} />
       </form>
 
       {rows.length === 0 ? (
