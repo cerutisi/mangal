@@ -11,6 +11,17 @@ import { formatOrderNumber, DELIVERY_LABELS } from '@/lib/orders'
 import { getSettings } from '@/lib/settings.server'
 import { sendOrderEmails, type OrderEmailData } from '@/lib/notify/email'
 import { sendTelegramOrder } from '@/lib/notify/telegram'
+import { beerOrderTitle, beerPriceMinor, type BeerRecipe } from '@/lib/brewery/recipe'
+import { BEER_CURRENCY } from '@/lib/brewery/ingredients'
+
+/** Позиция заказа с ценой, посчитанной на сервере — источник и для базы, и для писем */
+type PricedLine = {
+  productId: string | null
+  title: string
+  priceMinor: number
+  qty: number
+  recipe: BeerRecipe | null
+}
 
 export type CreateOrderResult =
   | { ok: true; number: string }
@@ -47,7 +58,7 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
     }
   }
 
-  const { fields, items, website, startedAt } = parsed.data
+  const { fields, items, website, startedAt, adultConfirmed } = parsed.data
 
   // Honeypot и время заполнения — тихий отказ, боту не объясняем причину
   if (website.length > 0 || Date.now() - startedAt < MIN_FILL_MS) {
@@ -57,11 +68,26 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
     }
   }
 
-  const ids = items.map((i) => i.productId)
-  const rows = await db.select().from(products).where(inArray(products.id, ids))
+  const beerItems = items.filter((i) => i.recipe)
+  const productItems = items.filter((i) => !i.recipe)
+
+  // Алкоголь — только совершеннолетним. Галочку в форме можно убрать из DOM,
+  // поэтому решает сервер
+  if (beerItems.length > 0 && !adultConfirmed) {
+    return {
+      ok: false,
+      message: 'В заказе есть пиво — подтвердите, что вам исполнилось 18 лет.',
+      fieldErrors: { adultConfirmed: 'Подтвердите возраст' },
+    }
+  }
+
+  const ids = productItems.map((i) => i.productId)
+  const rows = ids.length
+    ? await db.select().from(products).where(inArray(products.id, ids))
+    : []
   const byId = new Map(rows.map((p) => [p.id, p]))
 
-  const unavailable = items.filter((i) => {
+  const unavailable = productItems.filter((i) => {
     const product = byId.get(i.productId)
     return !product || !product.isActive || !product.inStock
   })
@@ -76,9 +102,37 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
     }
   }
 
-  // Сумма считается здесь и только здесь: клиентскому total веры нет
-  const currency = byId.get(ids[0])!.currency
-  const totalMinor = items.reduce((sum, i) => sum + byId.get(i.productId)!.priceMinor * i.qty, 0)
+  // Цены считаются здесь и только здесь: ни клиентскому total, ни цене пива
+  // из корзины веры нет. Пиво пересчитывается по справочнику сырья
+  const priced: PricedLine[] = [
+    ...productItems.map((i) => {
+      const product = byId.get(i.productId)!
+      return {
+        productId: product.id,
+        title: product.title,
+        priceMinor: product.priceMinor,
+        qty: i.qty,
+        recipe: null,
+      }
+    }),
+    ...beerItems.map((i) => ({
+      productId: null,
+      title: beerOrderTitle(i.recipe!),
+      priceMinor: beerPriceMinor(i.recipe!),
+      qty: i.qty,
+      recipe: i.recipe!,
+    })),
+  ]
+
+  const currency = rows[0]?.currency ?? BEER_CURRENCY
+  if (beerItems.length > 0 && currency !== BEER_CURRENCY) {
+    return {
+      ok: false,
+      message: 'Мангалы и пиво в разных валютах — оформите их отдельными заявками.',
+    }
+  }
+
+  const totalMinor = priced.reduce((sum, line) => sum + line.priceMinor * line.qty, 0)
 
   const idempotencyKey = String(
     (input as { idempotencyKey?: unknown }).idempotencyKey ?? randomUUID(),
@@ -127,17 +181,15 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
     })
 
     await tx.insert(orderItems).values(
-      items.map((i) => {
-        const product = byId.get(i.productId)!
-        return {
-          id: randomUUID(),
-          orderId,
-          productId: product.id,
-          titleSnapshot: product.title,
-          priceMinorSnapshot: product.priceMinor,
-          qty: i.qty,
-        }
-      }),
+      priced.map((line) => ({
+        id: randomUUID(),
+        orderId,
+        productId: line.productId,
+        titleSnapshot: line.title,
+        priceMinorSnapshot: line.priceMinor,
+        qty: line.qty,
+        recipe: line.recipe,
+      })),
     )
 
     return orderNumber
@@ -155,10 +207,7 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
     address: fields.deliveryType === 'pickup' ? null : fields.address,
     totalMinor,
     currency,
-    items: items.map((i) => {
-      const product = byId.get(i.productId)!
-      return { title: product.title, qty: i.qty, priceMinor: product.priceMinor }
-    }),
+    items: priced.map((line) => ({ title: line.title, qty: line.qty, priceMinor: line.priceMinor })),
     replyTime: settings.emails.replyTime,
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? '',
   }

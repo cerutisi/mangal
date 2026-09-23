@@ -12,7 +12,7 @@ type CartState = {
   pulseAt: number
   /** До восстановления из localStorage считать корзину пустой нельзя */
   hydrated: boolean
-  add: (productId: string, qty?: number) => void
+  add: (productId: string, qty?: number, recipe?: CartLine['recipe']) => void
   setQty: (productId: string, qty: number) => void
   remove: (productId: string) => void
   clear: () => void
@@ -29,11 +29,11 @@ export const useCart = create<CartState>()(
       pulseAt: 0,
       hydrated: false,
 
-      add: (productId, qty = 1) => {
+      add: (productId, qty = 1, recipe) => {
         const { lines } = get()
         const isNew = !lines.some((l) => l.productId === productId)
         if (isNew && lines.length >= MAX_LINES) return
-        set({ lines: mergeLine(lines, productId, qty), pulseAt: Date.now() })
+        set({ lines: mergeLine(lines, productId, qty, recipe), pulseAt: Date.now() })
       },
 
       setQty: (productId, qty) => set({ lines: setLineQty(get().lines, productId, qty) }),

@@ -15,6 +15,13 @@
       "when": 1788176418436,
       "tag": "0001_married_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790158144878,
+      "tag": "0002_dry_cyclops",
+      "breakpoints": true
     }
   ]
 }

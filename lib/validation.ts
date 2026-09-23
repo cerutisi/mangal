@@ -1,5 +1,14 @@
 import { z } from 'zod'
 import { DELIVERY_TYPES, ORDER_STATUSES } from '@/lib/db/schema'
+import {
+  EXTRA_IDS,
+  HOP_IDS,
+  LABEL_IDS,
+  MALT_IDS,
+  MAX_HOPS,
+  YEAST_IDS,
+} from '@/lib/brewery/ingredients'
+import { BEER_NAME_MAX, BEER_NAME_MESSAGES, BEER_NAME_PATTERN } from '@/lib/brewery/name'
 
 /** Страна продаж — Польша. Отсюда маска телефона и правила адреса. */
 export const PHONE_COUNTRY_CODE = '+48'
@@ -65,15 +74,39 @@ export const checkoutFieldsSchema = z
     }
   })
 
+export { BEER_NAME_MAX }
+
+export const beerRecipeSchema = z.object({
+  malt: z.enum(MALT_IDS, { errorMap: () => ({ message: 'Выберите солод' }) }),
+  hops: z
+    .array(z.enum(HOP_IDS))
+    .min(1, 'Нужен хотя бы один хмель')
+    .max(MAX_HOPS, `Не больше ${MAX_HOPS} сортов хмеля`)
+    .refine((hops) => new Set(hops).size === hops.length, 'Хмель не должен повторяться'),
+  yeast: z.enum(YEAST_IDS, { errorMap: () => ({ message: 'Выберите дрожжи' }) }),
+  extra: z.enum(EXTRA_IDS).nullable(),
+  name: z
+    .string()
+    .trim()
+    .min(1, BEER_NAME_MESSAGES.empty)
+    .max(BEER_NAME_MAX, BEER_NAME_MESSAGES.tooLong)
+    .regex(BEER_NAME_PATTERN, BEER_NAME_MESSAGES.pattern),
+  label: z.enum(LABEL_IDS),
+})
+
 export const cartItemSchema = z.object({
-  productId: z.string().min(1),
+  productId: z.string().min(1).max(200),
   qty: z.number().int().min(1, 'Минимум 1 штука').max(99, 'Максимум 99 штук за раз'),
+  /** Есть только у пива из пивоварни: цену по нему считает сервер */
+  recipe: beerRecipeSchema.optional(),
 })
 
 /** То, что реально приходит в Server Action: поля + позиции + антиспам. */
 export const createOrderSchema = z.object({
   fields: checkoutFieldsSchema,
   items: z.array(cartItemSchema).min(1, 'Арсенал пуст — сначала выберите мангал').max(20),
+  /** Подтверждение 18+. Обязательно, если в заказе есть пиво — проверяет сервер */
+  adultConfirmed: z.boolean().optional().default(false),
   /** honeypot: боты заполняют, люди не видят */
   website: z.string().max(0, 'Заявка не отправлена, обновите страницу').optional().default(''),
   /** время открытия формы, мс */

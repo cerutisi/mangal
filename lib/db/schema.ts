@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { integer, sqliteTable, text, index } from 'drizzle-orm/sqlite-core'
+import type { BeerRecipe } from '@/lib/brewery/recipe'
 
 /** Строка характеристики товара, показывается в карточке как HUD-полоса. */
 export type ProductStat = {
@@ -89,6 +90,8 @@ export const orderItems = sqliteTable('order_items', {
   titleSnapshot: text('title_snapshot').notNull(),
   priceMinorSnapshot: integer('price_minor_snapshot').notNull(),
   qty: integer('qty').notNull(),
+  /** Рецепт пива из пивоварни. У мангалов пусто, productId у пива — null */
+  recipe: text('recipe', { mode: 'json' }).$type<BeerRecipe>(),
 })
 
 export const adminUsers = sqliteTable('admin_users', {

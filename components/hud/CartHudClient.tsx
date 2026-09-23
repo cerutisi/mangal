@@ -84,7 +84,7 @@ export function CartHudClient({ catalog }: { catalog: CatalogEntry[] }) {
                         а не наползать на название на узком экране */}
                     <div className="min-w-[140px] flex-1">
                       <Link
-                        href={`/product/${line.product.slug}`}
+                        href={line.product.href ?? `/product/${line.product.slug}`}
                         className="text-hud text-bone uppercase hover:text-coal"
                         onClick={() => setExpanded(false)}
                       >

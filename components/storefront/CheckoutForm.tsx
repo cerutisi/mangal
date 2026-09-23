@@ -25,6 +25,9 @@ export function CheckoutForm({ catalog, demo }: { catalog: CatalogEntry[]; demo:
   const clear = useCart((s) => s.clear)
 
   const [serverError, setServerError] = useState('')
+  // Отдельно от полей формы: нужна, только если в корзине есть пиво
+  const [adultConfirmed, setAdultConfirmed] = useState(false)
+  const [adultError, setAdultError] = useState('')
   const startedAt = useRef(Date.now())
   // Ключ живёт весь сеанс формы: повторный сабмит не создаст второй заказ
   const [idempotencyKey] = useState(() => crypto.randomUUID())
@@ -43,7 +46,7 @@ export function CheckoutForm({ catalog, demo }: { catalog: CatalogEntry[]; demo:
   const deliveryType = watch('deliveryType')
   const needsAddress = deliveryType !== 'pickup'
 
-  const { lines: resolved, totalMinor, currency, count } = useMemo(
+  const { lines: resolved, totalMinor, currency, count, hasBeer } = useMemo(
     () => cartTotals(lines, catalog),
     [lines, catalog],
   )
@@ -54,11 +57,23 @@ export function CheckoutForm({ catalog, demo }: { catalog: CatalogEntry[]; demo:
 
   async function onSubmit(values: Parsed) {
     setServerError('')
+    setAdultError('')
+
+    if (hasBeer && !adultConfirmed) {
+      setAdultError('В заказе есть пиво — подтвердите, что вам исполнилось 18 лет')
+      document.getElementById('adultConfirmed')?.focus()
+      return
+    }
 
     const result = await createOrder({
       fields: values,
       // Ровно то, что человек видит в сводке справа: скрытые позиции не заказываем
-      items: resolved.map((l) => ({ productId: l.productId, qty: l.qty })),
+      items: resolved.map((l) => ({
+        productId: l.productId,
+        qty: l.qty,
+        ...(l.recipe ? { recipe: l.recipe } : {}),
+      })),
+      adultConfirmed: hasBeer && adultConfirmed,
       website: (document.getElementById('website') as HTMLInputElement | null)?.value ?? '',
       startedAt: startedAt.current,
       idempotencyKey,
@@ -67,7 +82,8 @@ export function CheckoutForm({ catalog, demo }: { catalog: CatalogEntry[]; demo:
     if (!result.ok) {
       setServerError(result.message)
       for (const [path, message] of Object.entries(result.fieldErrors ?? {})) {
-        setError(path as keyof Values, { message })
+        if (path === 'adultConfirmed') setAdultError(message)
+        else setError(path as keyof Values, { message })
       }
       return
     }
@@ -168,6 +184,31 @@ export function CheckoutForm({ catalog, demo }: { catalog: CatalogEntry[]; demo:
         <Field id="comment" label="Комментарий" error={errors.comment?.message}>
           <textarea id="comment" rows={3} className={inputClass} {...register('comment')} />
         </Field>
+
+        {hasBeer && (
+          <div>
+            <label htmlFor="adultConfirmed" className="flex min-h-[44px] cursor-pointer items-center gap-1">
+              <input
+                id="adultConfirmed"
+                type="checkbox"
+                checked={adultConfirmed}
+                onChange={(e) => {
+                  setAdultConfirmed(e.target.checked)
+                  if (e.target.checked) setAdultError('')
+                }}
+                aria-invalid={!!adultError}
+                aria-describedby={adultError ? 'adultConfirmed-error' : undefined}
+                className="h-[20px] w-[20px] accent-ember"
+              />
+              <span className="text-bone">Мне исполнилось 18 лет — в заказе есть пиво</span>
+            </label>
+            {adultError && (
+              <p id="adultConfirmed-error" role="alert" className="text-sm text-blood">
+                {adultError}
+              </p>
+            )}
+          </div>
+        )}
 
         {serverError && (
           <p role="alert" className="bevel border-blood bg-surface p-2 text-blood">

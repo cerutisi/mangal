@@ -315,3 +315,87 @@ html[data-motion='full'] .hero-sprite {
     background-position-x: -3072px;
   }
 }
+
+/* ---------------------------------------------------------------
+   Пивоварня
+   --------------------------------------------------------------- */
+
+/* Котёл: 6 кадров, лист 1152×160 (×4 от 48×40). Путь приходит из компонента
+   через переменную — CSS не знает про basePath на Pages.
+   Анимация гасится глобальным правилом спокойного режима: остаётся кадр 0. */
+@keyframes kettle-frames {
+  to {
+    background-position-x: -1152px;
+  }
+}
+
+@keyframes kettle-frames-sm {
+  to {
+    background-position-x: -576px;
+  }
+}
+
+.kettle-sprite {
+  width: 192px;
+  height: 160px;
+  background-image: var(--kettle-sheet);
+  background-repeat: no-repeat;
+  background-size: 1152px 160px;
+  image-rendering: pixelated;
+  animation: kettle-frames 1s steps(6, end) infinite;
+}
+
+/* ×2 вместо ×4 — тоже целое увеличение исходных 48×40 */
+.kettle-sprite--sm {
+  width: 96px;
+  height: 80px;
+  background-size: 576px 80px;
+  animation-name: kettle-frames-sm;
+}
+
+/* Во время варки бурлит заметно быстрее — но всё равно реже трёх вспышек в секунду:
+   меняется положение пузырей, а не яркость кадра */
+.kettle-sprite[data-brewing='true'] {
+  animation-duration: 0.45s;
+}
+
+/* Бутылка появляется снизу рывками — шаги вместо плавности, как всё на сайте */
+@keyframes bottle-pop {
+  0% {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.bottle-pop {
+  animation: bottle-pop 0.6s steps(6, end) both;
+}
+
+/* Предупредительная лента над баннером: жёсткие цветовые стопы, без размытия */
+.hazard-tape {
+  height: 8px;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--ember) 0 8px,
+    var(--steel-900) 8px 16px
+  );
+}
+
+/* Пустой слот рецепта: пунктирная рамка вместо объёмной */
+.slot-empty {
+  border: 2px dashed var(--steel-500);
+}
+
+/* Зона сброса подсвечивается, когда над ней тащат сырьё */
+.drop-active {
+  outline: 3px dashed var(--coal);
+  outline-offset: 4px;
+}

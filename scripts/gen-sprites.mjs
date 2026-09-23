@@ -315,6 +315,254 @@ heroFrames.forEach((frame, i) => {
 report.push(save('hero-sheet', sheet, 4)) // 1536×224
 report.push(save('hero-still', heroFrames[2], 4)) // кадр для спокойного режима
 
+/* ------------------------------------------------------------------
+   Пивоварня: сырьё и котёл
+   ------------------------------------------------------------------ */
+
+const BURLAP = '#b89a6a'
+const BURLAP_DARK = '#7d6440'
+const BURLAP_LIGHT = '#d8c090'
+
+/** Мешок солода: мешковина, завязка, полоса и зёрна цвета солода. */
+function drawSack(c, grain) {
+  rect(c, 6, 1, 4, 2, BURLAP_DARK) // завязка
+  hline(c, 5, 1, 1, BURLAP_DARK)
+  hline(c, 10, 1, 1, BURLAP_DARK)
+  rect(c, 5, 3, 6, 2, BURLAP) // горловина
+  trapezoid(c, 5, 14, 4, 11, 2, 13, BURLAP)
+  for (let y = 5; y <= 14; y++) px(c, 13 - Math.max(0, 14 - y > 8 ? 1 : 0), y, BURLAP_DARK)
+  vline(c, 4, 6, 7, BURLAP_LIGHT)
+  hline(c, 3, 9, 10, grain) // полоса-маркировка цветом солода
+  hline(c, 3, 10, 10, grain)
+  hline(c, 2, 14, 12, BURLAP_DARK)
+  // рассыпанные зёрна
+  px(c, 1, 15, grain)
+  px(c, 3, 15, grain)
+  px(c, 13, 15, grain)
+}
+
+/** Шишка хмеля: чешуйки «ёлочкой», черенок и лист. */
+function drawHop(c, green, dark) {
+  vline(c, 8, 0, 3, '#4a6b1f')
+  rect(c, 9, 1, 3, 1, '#5f8a2a')
+  px(c, 11, 2, '#5f8a2a')
+  const widths = [1, 2, 3, 4, 5, 5, 5, 4, 4, 3, 2, 1]
+  widths.forEach((w, i) => {
+    const y = 3 + i
+    hline(c, 8 - w, y, w * 2, i % 2 ? dark : green)
+    // чешуйки: светлый край слева, тень справа
+    px(c, 8 - w, y, i % 2 ? green : '#d8ec8a')
+    px(c, 7 + w, y, '#2f4a14')
+  })
+}
+
+/** Банка дрожжей: крышка, стекло, содержимое, пузырьки. */
+function drawJar(c, fill, lid = '#6b5a4a') {
+  rect(c, 4, 1, 8, 2, lid)
+  hline(c, 4, 1, 8, '#8f7a64')
+  rect(c, 3, 3, 10, 12, '#2a221c')
+  rect(c, 4, 4, 8, 10, '#3a332c')
+  rect(c, 4, 7, 8, 7, fill)
+  vline(c, 5, 5, 8, '#fff4dc55')
+  px(c, 7, 9, '#fff4dc')
+  px(c, 9, 11, '#fff4dc')
+  px(c, 10, 8, '#fff4dc')
+  hline(c, 3, 15, 10, '#17130f')
+}
+
+const MALT_GRAIN = {
+  'malt-pils': '#f0d48a',
+  'malt-wheat': '#f4e2a8',
+  'malt-vienna': '#d9a653',
+  'malt-smoked': '#a8642c',
+  'malt-caramel': '#b8621c',
+  'malt-chocolate': '#4a2410',
+}
+
+for (const [name, grain] of Object.entries(MALT_GRAIN)) {
+  const c = canvas(16, 16)
+  drawSack(c, grain)
+  if (name === 'malt-smoked') {
+    // дымок над мешком — отсылка к мангалу
+    px(c, 12, 0, '#6b5a4a')
+    px(c, 13, 1, '#463a30')
+    px(c, 12, 2, '#6b5a4a')
+  }
+  report.push(save(name, c, 3))
+}
+
+const HOP_TINTS = {
+  'hop-saaz': ['#a8c85a', '#7a9a38'],
+  'hop-cascade': ['#8cbc3c', '#5f8a2a'],
+  'hop-citra': ['#c8dc50', '#94ac2c'],
+  'hop-magnum': ['#6a9a30', '#3f6a1c'],
+}
+
+for (const [name, [green, dark]] of Object.entries(HOP_TINTS)) {
+  const c = canvas(16, 16)
+  drawHop(c, green, dark)
+  report.push(save(name, c, 3))
+}
+
+const YEAST_FILL = {
+  'yeast-lager': '#e8dcb0',
+  'yeast-ale': '#d9b77a',
+  'yeast-weizen': '#f0e2a0',
+  'yeast-belgian': '#c98f4a',
+}
+
+for (const [name, fill] of Object.entries(YEAST_FILL)) {
+  const c = canvas(16, 16)
+  drawJar(c, fill)
+  report.push(save(name, c, 3))
+}
+
+const EXTRA_ICONS = {
+  'extra-cherry': (c) => {
+    // две вишни на общем черенке
+    for (const [x, y] of [[4, 9], [10, 10]]) {
+      rect(c, x - 2, y - 1, 5, 4, PAL.blood)
+      rect(c, x - 1, y - 2, 3, 6, PAL.blood)
+      px(c, x - 1, y - 1, '#ff6a6a')
+      px(c, x + 2, y + 2, '#5a0808')
+    }
+    for (let i = 0; i < 5; i++) px(c, 5 + i, 6 - Math.floor(i / 2), '#4a6b1f')
+    for (let i = 0; i < 4; i++) px(c, 9 + Math.floor(i / 2), 4 + i, '#4a6b1f')
+    rect(c, 10, 2, 3, 2, '#7ba428')
+  },
+  'extra-honey': (c) => {
+    drawJar(c, '#e0a020', '#8a6d12')
+    rect(c, 5, 5, 6, 2, '#f0c040')
+    // ложка-мешалка
+    vline(c, 12, 0, 6, '#b89a6a')
+    rect(c, 11, 5, 3, 2, '#b89a6a')
+  },
+  'extra-coffee': (c) => {
+    for (const [x, y] of [[2, 3], [8, 5], [4, 10]]) {
+      rect(c, x, y + 1, 6, 3, '#5a3418')
+      rect(c, x + 1, y, 4, 5, '#5a3418')
+      hline(c, x + 1, y + 1, 1, '#8a5a30')
+      for (let i = 0; i < 4; i++) px(c, x + 1 + i, y + 2 + (i % 2 ? 0 : 1), '#2a1408')
+    }
+  },
+  'extra-orange': (c) => {
+    // долька апельсина
+    for (let y = 0; y < 8; y++) {
+      const w = [4, 6, 7, 8, 8, 8, 7, 6][y]
+      hline(c, 8 - w, 8 + y - 4, w * 2, '#f08a1a')
+    }
+    for (let y = 1; y < 7; y++) {
+      const w = [0, 4, 5, 6, 6, 5, 4][y]
+      hline(c, 8 - w, 8 + y - 4, w * 2, '#ffc060')
+    }
+    for (let i = 0; i < 5; i++) px(c, 8, 5 + i, '#fff4dc')
+    for (let i = 0; i < 4; i++) {
+      px(c, 7 - i, 6 + i, '#fff4dc')
+      px(c, 9 + i, 6 + i, '#fff4dc')
+    }
+  },
+  'extra-chili': (c) => {
+    // изогнутый перец
+    const body = [[3, 5], [4, 6], [5, 7], [6, 8], [7, 9], [8, 10], [9, 11], [10, 11], [11, 12], [12, 12]]
+    for (const [x, y] of body) {
+      rect(c, x, y - 1, 2, 3, PAL.blood)
+      px(c, x, y - 1, '#ff6a6a')
+    }
+    px(c, 13, 13, PAL.blood)
+    rect(c, 2, 3, 3, 3, '#4a6b1f')
+    px(c, 1, 2, '#7ba428')
+  },
+}
+
+for (const [name, draw] of Object.entries(EXTRA_ICONS)) {
+  const c = canvas(16, 16)
+  draw(c)
+  report.push(save(name, c, 3))
+}
+
+/**
+ * Котёл на мангале: медный чан с бурлящим суслом, пар, угли снизу.
+ * 6 кадров 48×40, лист 288×40, ×4 → 1152×160.
+ */
+const KETTLE_FRAMES = 6
+const COPPER = '#b8662c'
+const COPPER_DARK = '#7a3a14'
+const COPPER_LIGHT = '#e8a060'
+const WORT = '#c47a1a'
+const WORT_FOAM = '#f0d48a'
+
+const kettleSheet = canvas(48 * KETTLE_FRAMES, 40)
+for (let f = 0; f < KETTLE_FRAMES; f++) {
+  const c = canvas(48, 40)
+  const r = rng(301 + f)
+
+  // мангал-подставка
+  rect(c, 8, 30, 32, 5, PAL.steel700)
+  hline(c, 8, 30, 32, PAL.steel300)
+  hline(c, 8, 34, 32, PAL.steel900)
+  coals(c, 10, 31, 28, 3, 17, f)
+  for (const x of [11, 36]) {
+    vline(c, x, 35, 4, PAL.steel500)
+    hline(c, x - 1, 39, 3, PAL.steel700)
+  }
+
+  // языки пламени между мангалом и котлом
+  for (let i = 0; i < 7; i++) {
+    const x = 12 + i * 4 + (f % 2)
+    const h = 1 + ((i + f) % 3)
+    vline(c, x, 30 - h, h, h > 2 ? PAL.coal : PAL.ember)
+  }
+
+  // котёл
+  trapezoid(c, 12, 27, 7, 40, 10, 37, COPPER)
+  for (let y = 12; y <= 27; y++) {
+    const t = (y - 12) / 15
+    px(c, Math.round(40 + (37 - 40) * t), y, COPPER_DARK)
+    px(c, Math.round(40 + (37 - 40) * t) - 1, y, COPPER_DARK)
+    px(c, Math.round(7 + (10 - 7) * t) + 1, y, COPPER_LIGHT)
+  }
+  hline(c, 6, 11, 36, COPPER_LIGHT) // кромка
+  hline(c, 6, 12, 36, COPPER_DARK)
+  hline(c, 10, 27, 28, COPPER_DARK)
+  // заклёпки
+  for (let x = 12; x < 38; x += 5) px(c, x, 19, COPPER_DARK)
+  // ручки
+  rect(c, 3, 14, 3, 2, PAL.steel500)
+  rect(c, 42, 14, 3, 2, PAL.steel500)
+
+  // сусло с пузырями
+  hline(c, 8, 13, 32, WORT)
+  hline(c, 9, 14, 30, WORT)
+  for (let i = 0; i < 6; i++) {
+    const x = 10 + Math.floor(r() * 28)
+    px(c, x, 13, WORT_FOAM)
+    if (r() > 0.5) px(c, x + 1, 12, WORT_FOAM)
+  }
+
+  // пар: колонны пикселей, дрейфуют с кадром
+  for (let col = 0; col < 3; col++) {
+    for (let i = 0; i < 8; i++) {
+      const y = 10 - i
+      const x = 16 + col * 8 + Math.round(Math.sin((i + f + col * 2) / 1.8) * 2)
+      if (y >= 0 && (i + f + col) % 3 !== 0) px(c, x, y, i < 3 ? PAL.ash : PAL.steel700)
+    }
+  }
+
+  // лопнувший пузырь над поверхностью — в разных кадрах в разных местах
+  const bx = 12 + ((f * 7) % 24)
+  px(c, bx, 11, WORT_FOAM)
+  px(c, bx + 1, 10, WORT_FOAM)
+
+  for (let y = 0; y < c.h; y++) {
+    for (let x = 0; x < c.w; x++) {
+      const si = (y * c.w + x) * 4
+      if (c.data[si + 3] === 0) continue
+      c.data.copy(kettleSheet.data, (y * kettleSheet.w + f * 48 + x) * 4, si, si + 4)
+    }
+  }
+}
+report.push(save('kettle-sheet', kettleSheet, 4)) // 1152×160
+
 const total = report.reduce((s, r) => s + r.bytes, 0)
 console.log(report.map((r) => `${r.name.padEnd(16)} ${r.w}×${r.h}  ${r.bytes} B`).join('\n'))
 console.log(`\nВсего ${report.length} файлов, ${(total / 1024).toFixed(1)} КБ`)

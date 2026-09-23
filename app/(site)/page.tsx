@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Hero } from '@/components/storefront/Hero'
+import { BreweryBanner } from '@/components/brewery/BreweryBanner'
 import { Arsenal } from '@/components/storefront/Arsenal'
 import { Production } from '@/components/storefront/Production'
 import { Contacts } from '@/components/storefront/Contacts'
@@ -36,6 +37,7 @@ export default async function HomePage() {
 
   return (
     <main>
+      <BreweryBanner />
       <Hero settings={settings} demo={demo} />
       <Arsenal products={products} />
       <Production blocks={settings.production} />

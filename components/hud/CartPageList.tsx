@@ -47,7 +47,7 @@ export function CartPageList({ catalog }: { catalog: CatalogEntry[] }) {
 
             <div className="min-w-[140px] flex-1">
               <Link
-                href={`/product/${line.product.slug}`}
+                href={line.product.href ?? `/product/${line.product.slug}`}
                 className="text-hud text-bone uppercase hover:text-coal"
               >
                 {line.product.title}
