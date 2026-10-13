@@ -13,6 +13,18 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
         </div>
 
         <div className="flex flex-col gap-2 md:items-end">
+          <nav aria-label="Разделы" className="flex flex-wrap gap-x-3 gap-y-1">
+            {[
+              ['/#arsenal', 'Арсенал'],
+              ['/brewery', 'Пивоварня'],
+              ['/yard', 'Двор'],
+            ].map(([href, title]) => (
+              <Link key={href} href={href} className="text-hud text-bone uppercase hover:text-coal">
+                {title}
+              </Link>
+            ))}
+          </nav>
+
           {/* Подсказка о хоткеях живёт здесь, а не во всплывашке */}
           <p className="text-[11px] uppercase leading-5 tracking-widest text-steel-500">
             <kbd className="bevel-in bg-void px-[4px] text-coal">1</kbd>–

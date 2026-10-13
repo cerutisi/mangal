@@ -399,3 +399,98 @@ html[data-motion='full'] .hero-sprite {
   outline: 3px dashed var(--coal);
   outline-offset: 4px;
 }
+
+/* ---------------------------------------------------------------
+   Двор: сцена 160×90 логических пикселей.
+   --px — сколько экранных пикселей в одном логическом, всегда целое.
+   Все размеры и сдвиги кадров считаются от него, поэтому один лист
+   годится для любого масштаба, а анимацию гасит спокойный режим.
+   --------------------------------------------------------------- */
+
+@keyframes yard-frames {
+  to {
+    background-position-x: calc(var(--px) * -1280);
+  }
+}
+
+@keyframes fire-frames {
+  to {
+    background-position-x: calc(var(--px) * -256);
+  }
+}
+
+.yard {
+  --px: 2px;
+  position: relative;
+  flex-shrink: 0;
+  width: calc(var(--px) * 160);
+  height: calc(var(--px) * 90);
+  overflow: hidden;
+  background-color: #090b18;
+  background-image: var(--yard-sheet);
+  background-repeat: no-repeat;
+  background-size: calc(var(--px) * 1280) calc(var(--px) * 90);
+  image-rendering: pixelated;
+  /* 5 кадров в секунду: ночь нетороплива */
+  animation: yard-frames 1.6s steps(8, end) infinite;
+}
+
+/* Полноразмерная сцена растёт ступенями — только целые масштабы */
+@media (min-width: 520px) {
+  .yard--full {
+    --px: 3px;
+  }
+}
+@media (min-width: 680px) {
+  .yard--full {
+    --px: 4px;
+  }
+}
+/* Крупные ступени — только если сцена целиком помещается над HUD-корзиной */
+@media (min-width: 840px) and (min-height: 740px) {
+  .yard--full {
+    --px: 5px;
+  }
+}
+@media (min-width: 1024px) and (min-height: 840px) {
+  .yard--full {
+    --px: 6px;
+  }
+}
+
+.yard > * {
+  position: absolute;
+  max-width: none;
+}
+
+/* Огонь стоит позади мангала: языки видны над кромкой и сами прячутся за крышку */
+.yard-fire {
+  left: calc(var(--px) * 90);
+  top: calc(var(--px) * 22);
+  width: calc(var(--px) * 32);
+  height: calc(var(--px) * 40);
+  background-image: var(--fire-sheet);
+  background-repeat: no-repeat;
+  background-size: calc(var(--px) * 256) calc(var(--px) * 40);
+  image-rendering: pixelated;
+  animation: fire-frames 0.9s steps(8, end) infinite;
+}
+
+/* Подбросили углей: огонь живее. Меняется форма языков, яркость кадра та же */
+.yard[data-stoked='true'] .yard-fire {
+  animation-duration: 0.5s;
+}
+
+.yard-mangal {
+  left: calc(var(--px) * 90);
+  top: calc(var(--px) * 46);
+  width: calc(var(--px) * 32);
+  height: calc(var(--px) * 32);
+}
+
+.yard-crate {
+  left: calc(var(--px) * 126);
+  top: calc(var(--px) * 64);
+  width: calc(var(--px) * 26);
+  height: calc(var(--px) * 17);
+}

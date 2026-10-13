@@ -563,6 +563,312 @@ for (let f = 0; f < KETTLE_FRAMES; f++) {
 }
 report.push(save('kettle-sheet', kettleSheet, 4)) // 1152×160
 
+/* ------------------------------------------------------------------
+   Двор: ночная сцена с избой и отдельный лист огня для мангала.
+   Оба листа сохраняются ×1 — масштаб задаёт CSS (целое число на пиксель),
+   поэтому одна картинка годится и для телефона, и для широкого экрана.
+   Все движения зациклены ровно на 8 кадров: шва при повторе нет.
+   ------------------------------------------------------------------ */
+
+const TAU = Math.PI * 2
+const YARD_W = 160
+const YARD_H = 90
+const YARD_FRAMES = 8
+
+/** Склеивает кадры в горизонтальный лист. */
+function composeSheet(frames) {
+  const w = frames[0].w
+  const sheet = canvas(w * frames.length, frames[0].h)
+  frames.forEach((frame, i) => {
+    for (let y = 0; y < frame.h; y++) {
+      for (let x = 0; x < w; x++) {
+        const si = (y * w + x) * 4
+        if (frame.data[si + 3] === 0) continue
+        frame.data.copy(sheet.data, (y * sheet.w + i * w + x) * 4, si, si + 4)
+      }
+    }
+  })
+  return sheet
+}
+
+const LOG = ['#7a4e28', '#63401f', '#452b14'] // блик, тело, тень бревна
+const roofY = (x) => 17 + Math.round((Math.abs(x - 43) * 23) / 34)
+const logRow = (y) => LOG[(((y - 40) % 3) + 3) % 3]
+
+function pine(c, cx, baseY, height, dark, light) {
+  const tiers = 4
+  const tierH = Math.floor(height / tiers)
+  for (let t = 0; t < tiers; t++) {
+    const top = baseY - height + t * tierH
+    for (let j = 0; j < tierH + 2; j++) {
+      const half = Math.round(((j + 1) * (4 + t * 2)) / (tierH + 2))
+      hline(c, cx - half, top + j, half * 2 + 1, dark)
+      px(c, cx - half, top + j, light)
+    }
+  }
+  rect(c, cx - 1, baseY - 2, 2, 4, '#2a1c10')
+}
+
+function drawYard(c, f) {
+  /* --- небо: полосы, стыки смягчены шахматным дизерингом --- */
+  const SKY = ['#090b18', '#0d1022', '#12172e', '#171e3a', '#1d2647']
+  for (let y = 0; y < 64; y++) {
+    const band = Math.min(SKY.length - 1, Math.floor(y / 12))
+    hline(c, 0, y, YARD_W, SKY[band])
+    if (y % 12 >= 10 && band < SKY.length - 1) {
+      for (let x = y % 2; x < YARD_W; x += 2) px(c, x, y, SKY[band + 1])
+    }
+  }
+
+  /* --- звёзды: часть мерцает, у каждой своя фаза --- */
+  const sr = rng(4242)
+  for (let i = 0; i < 54; i++) {
+    const x = Math.floor(sr() * YARD_W)
+    const y = Math.floor(sr() * 46)
+    const twinkles = sr() < 0.3
+    const off = Math.floor(sr() * 8)
+    const bright = sr() < 0.4
+    if (Math.hypot(x - 134, y - 14) < 9) continue // не лезем на луну
+    if (twinkles) px(c, x, y, (f + off) % 8 < 2 ? '#39446e' : '#e8ecff')
+    else px(c, x, y, bright ? '#c4ccee' : '#6f7aa8')
+  }
+
+  /* --- луна --- */
+  for (let y = -5; y <= 5; y++) {
+    for (let x = -5; x <= 5; x++) {
+      if (x * x + y * y <= 27) px(c, 134 + x, 14 + y, '#e8e4c8')
+    }
+  }
+  for (const [x, y] of [[132, 12], [133, 12], [136, 15], [135, 17], [131, 16], [137, 11]]) {
+    px(c, x, y, '#c4be9c')
+  }
+
+  /* --- лес на горизонте: два слоя силуэтов --- */
+  for (const [seed, color, minH, maxH] of [[77, '#111a2e', 9, 16], [91, '#0a111c', 5, 10]]) {
+    const fr = rng(seed)
+    let x = -2
+    while (x < YARD_W + 4) {
+      const h = minH + Math.floor(fr() * (maxH - minH))
+      const half = 2 + Math.floor(fr() * 2)
+      for (let j = 0; j < h; j++) {
+        const w = Math.round(((j + 1) * half) / h)
+        hline(c, x - w, 63 - h + j, w * 2 + 1, color)
+      }
+      x += 3 + Math.floor(fr() * 4)
+    }
+  }
+
+  /* --- земля --- */
+  rect(c, 0, 62, YARD_W, YARD_H - 62, '#16260f')
+  hline(c, 0, 62, YARD_W, '#1e3415')
+  const gr = rng(1313)
+  for (let i = 0; i < 260; i++) {
+    const x = Math.floor(gr() * YARD_W)
+    const y = 63 + Math.floor(gr() * 27)
+    px(c, x, y, gr() < 0.5 ? '#122009' : '#24401a')
+  }
+
+  /* --- тропинка от крыльца к зрителю --- */
+  for (let y = 68; y < YARD_H; y++) {
+    const t = (y - 68) / 22
+    const l = Math.round(37 - t * 9)
+    const r = Math.round(48 + t * 22)
+    hline(c, l, y, r - l, '#3a2c1c')
+    px(c, l + ((y * 7) % Math.max(1, r - l)), y, '#4c3b27')
+  }
+
+  /* --- ели по краям, позади дома --- */
+  pine(c, 2, 66, 46, '#0e1c12', '#16301c')
+  pine(c, 151, 67, 40, '#0e1c12', '#16301c')
+  pine(c, 96, 64, 30, '#0c1810', '#132a18')
+
+  /* --- труба: рисуется до крыши, скат закроет её основание --- */
+  rect(c, 56, 13, 6, 16, '#6a3a2a')
+  for (let y = 15; y < 29; y += 3) hline(c, 56, y, 6, '#4a2a20')
+  for (let y = 13; y < 29; y += 6) px(c, 58, y + 1, '#4a2a20')
+  rect(c, 55, 12, 8, 2, '#3a3036')
+  hline(c, 55, 12, 8, '#52464c')
+
+  /* --- фронтон и стены из брёвен --- */
+  for (let x = 13; x <= 73; x++) {
+    for (let y = roofY(x) + 3; y < 40; y++) px(c, x, y, logRow(y))
+  }
+  for (let y = 40; y <= 65; y++) hline(c, 14, y, 59, logRow(y))
+  const kr = rng(555)
+  for (let i = 0; i < 14; i++) px(c, 15 + Math.floor(kr() * 56), 41 + Math.floor(kr() * 8) * 3, '#3a2410')
+
+  // торцы брёвен по углам: выступают за стену, спил светлее
+  for (let y = 40; y <= 65; y += 3) {
+    for (const x of [12, 73]) {
+      rect(c, x, y, 2, 3, '#3a2410')
+      rect(c, x, y, 2, 2, '#9a7046')
+      px(c, x, y, '#b88a5a')
+    }
+  }
+  vline(c, 14, 40, 26, '#3a2410')
+  vline(c, 72, 40, 26, '#3a2410')
+
+  /* --- крыша: доски вдоль скатов, со свесом --- */
+  for (let x = 8; x <= 78; x++) {
+    vline(c, x, roofY(x), 3, '#2a190e')
+    px(c, x, roofY(x), '#4a2e1a')
+  }
+  rect(c, 42, 15, 3, 3, '#2a190e') // конёк
+  hline(c, 42, 15, 3, '#4a2e1a')
+
+  /* --- окна: тёплый свет чуть дрожит, не чаще трёх смен в секунду --- */
+  const GLOW = ['#ffb347', '#f2a03a', '#ffc96a']
+  const glow = GLOW[[0, 0, 1, 1, 0, 0, 2, 2][f]]
+
+  rect(c, 40, 27, 6, 6, '#2a190e') // слуховое окно
+  rect(c, 41, 28, 4, 4, glow)
+  vline(c, 43, 28, 4, '#2a190e')
+
+  for (const wx of [20, 56]) {
+    rect(c, wx - 3, 46, 3, 12, '#3e2a1a') // ставни
+    rect(c, wx + 12, 46, 3, 12, '#3e2a1a')
+    for (let y = 48; y < 58; y += 3) {
+      hline(c, wx - 3, y, 3, '#2a1a0e')
+      hline(c, wx + 12, y, 3, '#2a1a0e')
+    }
+    rect(c, wx, 46, 12, 12, '#9a7a50') // рама
+    rect(c, wx + 1, 47, 10, 10, glow)
+    // занавески: тёмные уголки сверху
+    for (let j = 0; j < 4; j++) {
+      hline(c, wx + 1, 47 + j, 4 - j, '#c8662a')
+      hline(c, wx + 7 + j, 47 + j, 4 - j, '#c8662a')
+    }
+    vline(c, wx + 6, 47, 10, '#9a7a50') // переплёт
+    hline(c, wx + 1, 52, 10, '#9a7a50')
+    hline(c, wx - 1, 58, 14, '#b89464') // подоконник
+    // свет из окна на траве: шахматка, чтобы не было сплошного пятна
+    for (let y = 67; y < 73; y++) {
+      const spread = y - 67
+      for (let x = wx - spread; x < wx + 12 + spread; x++) {
+        if ((x + y) % 2 === 0) px(c, x, y, f % 4 < 2 ? '#f2a03a40' : '#f2a03a33')
+      }
+    }
+  }
+
+  /* --- дверь, фонарь над ней, крыльцо --- */
+  rect(c, 37, 48, 12, 18, '#2a1a0e')
+  rect(c, 38, 49, 10, 17, '#5a3a1e')
+  for (let x = 40; x < 48; x += 3) vline(c, x, 49, 17, '#3e2814')
+  hline(c, 38, 54, 10, '#3e2814')
+  hline(c, 38, 61, 10, '#3e2814')
+  px(c, 46, 58, '#d8b040')
+  rect(c, 42, 44, 2, 2, '#ffd070')
+  for (const [x, y] of [[41, 44], [44, 45], [42, 43], [43, 46], [41, 46], [44, 43]]) {
+    px(c, x, y, f % 2 ? '#f2701d88' : '#f2701d55')
+  }
+  hline(c, 13, 66, 61, '#33333a') // фундамент
+  for (let x = 16; x < 73; x += 5) px(c, x, 66, '#22222a')
+  rect(c, 34, 66, 18, 2, '#5a4630')
+  hline(c, 34, 66, 18, '#7a6040')
+
+  /* --- поленница у стены --- */
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 4 - (row === 2 ? 1 : 0); col++) {
+      const x = 2 + col * 3 + (row % 2)
+      const y = 64 - row * 3
+      rect(c, x, y, 3, 3, '#3a2410')
+      rect(c, x, y, 2, 2, '#a87a48')
+      px(c, x, y, '#c89a60')
+    }
+  }
+
+  /* --- дым из трубы: клубы поднимаются и сносятся ветром вправо --- */
+  for (let k = 0; k < 5; k++) {
+    const age = (f + k * 1.6) % 8
+    const x = 58 + Math.round(Math.sin(age * 0.9 + k) * 1.5 + age * 0.7)
+    const y = Math.round(10 - age * 1.5)
+    const color = age < 3 ? '#5a5f78' : age < 6 ? '#3d4462' : '#2a3050'
+    if (age < 3) rect(c, x, y, 2, 2, color)
+    else if (age < 6) rect(c, x, y, 3, 2, color)
+    else rect(c, x, y, 2, 1, color)
+  }
+
+  /* --- отсвет мангала на траве: радиус чуть дышит --- */
+  const rx = 21 + [0, 1, 2, 1, 0, -1, 0, 1][f]
+  for (let y = 73; y <= 83; y++) {
+    for (let x = 106 - rx; x <= 106 + rx; x++) {
+      const d = ((x - 106) / rx) ** 2 + ((y - 78) / 5) ** 2
+      if (d <= 1 && (x + y) % 2 === 0) px(c, x, y, d < 0.4 ? '#f2701d55' : '#f2701d2e')
+    }
+  }
+  // тень под ящиком
+  for (let x = 125; x < 153; x += 1) if (x % 2) px(c, x, 81, '#0c1608')
+
+  /* --- светлячки: кружат по маленьким эллипсам и подмигивают --- */
+  for (const [cx, cy, r, off] of [[86, 57, 3, 0], [122, 50, 2, 3], [22, 76, 3, 5], [140, 60, 2, 6]]) {
+    const a = (TAU * (f + off)) / 8
+    if ((f + off) % 8 === 3) continue
+    px(c, cx + Math.round(Math.cos(a) * r), cy + Math.round(Math.sin(a) * r * 0.6), '#d8ff70')
+  }
+
+  /* --- трава на переднем плане --- */
+  const br = rng(2024)
+  for (let i = 0; i < 70; i++) {
+    const x = Math.floor(br() * YARD_W)
+    const h = 1 + Math.floor(br() * 3)
+    vline(c, x, YARD_H - h, h, br() < 0.5 ? '#24401a' : '#2e5222')
+  }
+}
+
+const yardFrames = []
+for (let f = 0; f < YARD_FRAMES; f++) {
+  const c = canvas(YARD_W, YARD_H)
+  drawYard(c, f)
+  yardFrames.push(c)
+}
+report.push(save('yard-sheet', composeSheet(yardFrames))) // 1280×90
+
+/**
+ * Огонь для мангала во дворе: 32×40, низ листа совпадает с серединой спрайта
+ * мангала. Слой кладётся ПОЗАДИ спрайта — языки видны над кромкой, а у моделей
+ * с крышкой сами прячутся за неё, и подгонять огонь под каждый корпус не нужно.
+ */
+function drawFire(c, f) {
+  const t = f / YARD_FRAMES
+  for (let x = 5; x <= 26; x++) {
+    const d = Math.abs(x - 15.5) / 11
+    const profile = Math.max(0, 1 - d * d)
+    const wave =
+      0.62 + 0.24 * Math.sin(TAU * t + x * 0.8) + 0.14 * Math.sin(TAU * 2 * t - x * 1.7)
+    const h = Math.round(17 * profile * wave)
+    for (let j = 0; j < h; j++) {
+      const rel = j / h
+      const color = rel < 0.25 ? PAL.white : rel < 0.5 ? PAL.coal : rel < 0.8 ? PAL.ember : PAL.blood
+      px(c, x, 39 - j, color)
+    }
+  }
+  // искры
+  const sr = rng(909)
+  for (let i = 0; i < 8; i++) {
+    const x0 = 8 + Math.floor(sr() * 16)
+    const off = Math.floor(sr() * 8)
+    const age = (f + off) % 8
+    const x = x0 + Math.round(Math.sin(age + i) * 1.5)
+    const y = 24 - age * 3
+    px(c, x, y, age < 3 ? PAL.coal : age < 6 ? PAL.ember : PAL.rust)
+  }
+  // дымок над огнём
+  for (let k = 0; k < 3; k++) {
+    const age = (f + k * 2.7) % 8
+    const x = 13 + k * 3 + Math.round(Math.sin(age * 0.8 + k) * 2)
+    const y = Math.round(14 - age * 1.8)
+    rect(c, x, y, 2, 1, age < 4 ? '#5a4e4488' : '#3a332c66')
+  }
+}
+
+const fireFrames = []
+for (let f = 0; f < YARD_FRAMES; f++) {
+  const c = canvas(32, 40)
+  drawFire(c, f)
+  fireFrames.push(c)
+}
+report.push(save('fire-sheet', composeSheet(fireFrames))) // 256×40
+
 const total = report.reduce((s, r) => s + r.bytes, 0)
 console.log(report.map((r) => `${r.name.padEnd(16)} ${r.w}×${r.h}  ${r.bytes} B`).join('\n'))
 console.log(`\nВсего ${report.length} файлов, ${(total / 1024).toFixed(1)} КБ`)

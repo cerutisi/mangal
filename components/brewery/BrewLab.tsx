@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Sprite } from '@/components/ui/Sprite'
 import { Stepper } from '@/components/ui/Stepper'
-import { PixelButton } from '@/components/ui/PixelButton'
+import { PixelButton, PixelLink } from '@/components/ui/PixelButton'
 import { StatBar } from '@/components/storefront/StatBar'
 import { useCart } from '@/lib/cart/store'
 import { formatMoney } from '@/lib/money'
@@ -426,6 +426,12 @@ export function BrewLab() {
             <p role="status" className="mt-1 text-sm text-moss">
               {added}
             </p>
+
+            {added && (
+              <PixelLink href="/yard" variant="ghost" className="mt-1">
+                Посмотреть во дворе →
+              </PixelLink>
+            )}
 
             <PixelButton variant="ghost" onClick={rework} className="mt-2">
               Изменить рецепт

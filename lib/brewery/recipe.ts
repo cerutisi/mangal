@@ -119,7 +119,7 @@ function rgbHex([r, g, b]: [number, number, number]): string {
   return '#' + [r, g, b].map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('')
 }
 
-function shade(hex: string, amount: number): string {
+export function shade(hex: string, amount: number): string {
   const n = parseInt(hex.slice(1), 16)
   const rgb: [number, number, number] = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
   return rgbHex(

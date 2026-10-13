@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Hero } from '@/components/storefront/Hero'
 import { BreweryBanner } from '@/components/brewery/BreweryBanner'
 import { Arsenal } from '@/components/storefront/Arsenal'
+import { YardTeaser } from '@/components/yard/YardTeaser'
 import { Production } from '@/components/storefront/Production'
 import { Contacts } from '@/components/storefront/Contacts'
 import { getActiveProducts } from '@/lib/catalog'
@@ -40,6 +41,7 @@ export default async function HomePage() {
       <BreweryBanner />
       <Hero settings={settings} demo={demo} />
       <Arsenal products={products} />
+      {products[0] && <YardTeaser mangalSrc={products[0].spriteUrl} />}
       <Production blocks={settings.production} />
       <Contacts contacts={settings.contacts} />
 
